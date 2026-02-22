@@ -1,0 +1,23 @@
+run:
+  tests: true
+
+# Keep linters enabled globally but exclude gosimple findings inside hooks/.
+issues:
+  exclude-rules:
+    - path: ^hooks/.*
+      linters:
+        - gosimple
+      # Optionally, restrict by text if you want to target a specific message.
+      # text: "redundant type args"
+
+run:
+  timeout: 5m
+linters:
+  disable-all: true
+  enable:
+    - govet
+    - errcheck
+    - staticcheck
+    - gofmt
+issues:
+  exclude-use-default: false
