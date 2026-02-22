@@ -14,15 +14,17 @@ import (
 )
 
 type textBoxInternalState struct {
-	value      string
-	cursorLine int
-	cursorCol  int
-	dragStart  int
-	dragEnd    int
-	isDragging bool
-	scrollTop  int
-	focused    bool
-	onChange   func(string)
+	value             string
+	lastSeenPropValue string
+	cursorLine        int
+	cursorCol         int
+	dragStart         int
+	dragEnd           int
+	isDragging        bool
+	scrollTop         int
+	focused           bool
+	onChange          func(string)
+	visualLines       []visualLine
 }
 
 type visualLine struct {
@@ -135,12 +137,30 @@ func TextBox(props any) vdom.Node {
 	}, []any{value, currentTextWidth})
 
 	stateRef := hooks.UseRef(hc, &textBoxInternalState{})
-	stateRef.Value.value = value
-	stateRef.Value.cursorLine = cursorLine
-	stateRef.Value.cursorCol = cursorCol
-	stateRef.Value.scrollTop = scrollTop
-	stateRef.Value.focused = focused
-	stateRef.Value.onChange = onChange
+	s := stateRef.Value
+	if value != s.lastSeenPropValue {
+		s.value = value
+		s.lastSeenPropValue = value
+		// Clamp cursor to new value bounds if necessary
+		physicalLines := strings.Split(value, "\n")
+		if s.cursorLine >= len(physicalLines) {
+			s.cursorLine = len(physicalLines) - 1
+			setCursorLine(s.cursorLine)
+		}
+		if s.cursorLine < 0 {
+			s.cursorLine = 0
+			setCursorLine(0)
+		}
+		runes := []rune(physicalLines[s.cursorLine])
+		if s.cursorCol > len(runes) {
+			s.cursorCol = len(runes)
+			setCursorCol(s.cursorCol)
+		}
+	}
+	s.scrollTop = scrollTop
+	s.focused = focused
+	s.onChange = onChange
+	s.visualLines = visualLines
 
 	handleMouse := func(e events.MouseEvent) {
 		s := stateRef.Value
@@ -207,8 +227,12 @@ func TextBox(props any) vdom.Node {
 			return
 		}
 
-		currentLines := strings.Split(value, "\n")
-		cl, cc := cursorLine, cursorCol
+		// Use stateRef to ensure latest values across frames/goroutines
+		s := stateRef.Value
+		currentValue := s.value
+		cl, cc := s.cursorLine, s.cursorCol
+		currentLines := strings.Split(currentValue, "\n")
+		currentVisualLines := s.visualLines
 
 		getSelection := func() (int, int, int, int) {
 			if dragStartLine == -1 {
@@ -236,7 +260,13 @@ func TextBox(props any) vdom.Node {
 			newLines := append([]string{}, currentLines[:sl]...)
 			newLines = append(newLines, newFirstPart+newLastPart)
 			newLines = append(newLines, currentLines[el+1:]...)
-			onChange(strings.Join(newLines, "\n"))
+
+			newVal := strings.Join(newLines, "\n")
+			s.value = newVal
+			s.cursorLine = sl
+			s.cursorCol = sc
+
+			onChange(newVal)
 			setCursorLine(sl)
 			setCursorCol(sc)
 			setDragStartLine(-1)
@@ -247,13 +277,10 @@ func TextBox(props any) vdom.Node {
 			setDragStartLine(-1)
 			// Find current visual line
 			currentVisualLineIdx := -1
-			for i, vl := range visualLines {
+			for i, vl := range currentVisualLines {
 				if vl.physicalLineIdx == cl && cc >= vl.startRuneIdx && cc <= vl.startRuneIdx+len([]rune(vl.content)) {
 					// Disambiguate if cursor is at the boundary of two visual lines
-					if cc == vl.startRuneIdx+len([]rune(vl.content)) && i+1 < len(visualLines) && visualLines[i+1].physicalLineIdx == cl && visualLines[i+1].startRuneIdx == cc {
-						// Cursor is at the very end of this visual line, but also at the start of next.
-						// Usually we prefer showing it at the start of next, but if we are moving UP,
-						// we might already be on the "start of next" one.
+					if cc == vl.startRuneIdx+len([]rune(vl.content)) && i+1 < len(currentVisualLines) && currentVisualLines[i+1].physicalLineIdx == cl && currentVisualLines[i+1].startRuneIdx == cc {
 						continue
 					}
 					currentVisualLineIdx = i
@@ -262,14 +289,17 @@ func TextBox(props any) vdom.Node {
 			}
 
 			if currentVisualLineIdx > 0 {
-				prevVl := visualLines[currentVisualLineIdx-1]
-				setCursorLine(prevVl.physicalLineIdx)
+				prevVl := currentVisualLines[currentVisualLineIdx-1]
+				s.cursorLine = prevVl.physicalLineIdx
 				// Try to maintain column position (best effort)
-				offsetInCurrent := cc - visualLines[currentVisualLineIdx].startRuneIdx
+				offsetInCurrent := cc - currentVisualLines[currentVisualLineIdx].startRuneIdx
 				newCol := prevVl.startRuneIdx + offsetInCurrent
 				if newCol > prevVl.startRuneIdx+len([]rune(prevVl.content)) {
 					newCol = prevVl.startRuneIdx + len([]rune(prevVl.content))
 				}
+				s.cursorCol = newCol
+
+				setCursorLine(prevVl.physicalLineIdx)
 				setCursorCol(newCol)
 
 				if currentVisualLineIdx-1 < scrollTop {
@@ -280,23 +310,25 @@ func TextBox(props any) vdom.Node {
 			setDragStartLine(-1)
 			// Find current visual line
 			currentVisualLineIdx := -1
-			for i, vl := range visualLines {
+			for i, vl := range currentVisualLines {
 				if vl.physicalLineIdx == cl && cc >= vl.startRuneIdx && cc <= vl.startRuneIdx+len([]rune(vl.content)) {
 					currentVisualLineIdx = i
-					// Prefer the first visual line that matches (start of line)
 					break
 				}
 			}
 
-			if currentVisualLineIdx != -1 && currentVisualLineIdx < len(visualLines)-1 {
-				nextVl := visualLines[currentVisualLineIdx+1]
-				setCursorLine(nextVl.physicalLineIdx)
+			if currentVisualLineIdx != -1 && currentVisualLineIdx < len(currentVisualLines)-1 {
+				nextVl := currentVisualLines[currentVisualLineIdx+1]
+				s.cursorLine = nextVl.physicalLineIdx
 				// Try to maintain column position
-				offsetInCurrent := cc - visualLines[currentVisualLineIdx].startRuneIdx
+				offsetInCurrent := cc - currentVisualLines[currentVisualLineIdx].startRuneIdx
 				newCol := nextVl.startRuneIdx + offsetInCurrent
 				if newCol > nextVl.startRuneIdx+len([]rune(nextVl.content)) {
 					newCol = nextVl.startRuneIdx + len([]rune(nextVl.content))
 				}
+				s.cursorCol = newCol
+
+				setCursorLine(nextVl.physicalLineIdx)
 				setCursorCol(newCol)
 
 				if currentVisualLineIdx+1 >= scrollTop+height {
@@ -306,16 +338,23 @@ func TextBox(props any) vdom.Node {
 		case "left":
 			setDragStartLine(-1)
 			if cc > 0 {
+				s.cursorCol = cc - 1
 				setCursorCol(cc - 1)
 			} else if cl > 0 {
+				newCol := len([]rune(currentLines[cl-1]))
+				s.cursorLine = cl - 1
+				s.cursorCol = newCol
 				setCursorLine(cl - 1)
-				setCursorCol(len([]rune(currentLines[cl-1])))
+				setCursorCol(newCol)
 			}
 		case "right":
 			setDragStartLine(-1)
 			if cc < len([]rune(currentLines[cl])) {
+				s.cursorCol = cc + 1
 				setCursorCol(cc + 1)
 			} else if cl < len(currentLines)-1 {
+				s.cursorLine = cl + 1
+				s.cursorCol = 0
 				setCursorLine(cl + 1)
 				setCursorCol(0)
 			}
@@ -327,23 +366,30 @@ func TextBox(props any) vdom.Node {
 			newLines := append([]string{}, currentLines[:cl]...)
 			newLines = append(newLines, newCurrent, newNext)
 			newLines = append(newLines, currentLines[cl+1:]...)
-			onChange(strings.Join(newLines, "\n"))
+
+			newVal := strings.Join(newLines, "\n")
+			s.value = newVal
+			s.cursorLine = cl + 1
+			s.cursorCol = 0
+
+			onChange(newVal)
 			setCursorLine(cl + 1)
 			setCursorCol(0)
-		case "backspace", "\x7f", "ctrl+h":
-			sl, sc, el, ec := getSelection()
+		case "backspace", "\x7f", "\b", "ctrl+h":
+			sl, _, _, _ := getSelection()
 			if sl != -1 {
 				deleteSelection()
-				_ = sc
-				_ = el
-				_ = ec
 				return
 			}
+
 			if cc > 0 {
 				lineRunes := []rune(currentLines[cl])
-				newVal := string(lineRunes[:cc-1]) + string(lineRunes[cc:])
-				currentLines[cl] = newVal
-				onChange(strings.Join(currentLines, "\n"))
+				newValLine := string(lineRunes[:cc-1]) + string(lineRunes[cc:])
+				currentLines[cl] = newValLine
+				newVal := strings.Join(currentLines, "\n")
+				s.value = newVal
+				s.cursorCol = cc - 1
+				onChange(newVal)
 				setCursorCol(cc - 1)
 			} else if cl > 0 {
 				prevLineRunes := []rune(currentLines[cl-1])
@@ -351,29 +397,38 @@ func TextBox(props any) vdom.Node {
 				newCursorCol := len(prevLineRunes)
 				currentLines[cl-1] = string(prevLineRunes) + string(currentLineRunes)
 				newLines := append(currentLines[:cl], currentLines[cl+1:]...)
-				onChange(strings.Join(newLines, "\n"))
+
+				newVal := strings.Join(newLines, "\n")
+				s.value = newVal
+				s.cursorLine = cl - 1
+				s.cursorCol = newCursorCol
+
+				onChange(newVal)
 				setCursorLine(cl - 1)
 				setCursorCol(newCursorCol)
 			}
 		case "delete":
-			sl, sc, el, ec := getSelection()
+			sl, _, _, _ := getSelection()
 			if sl != -1 {
 				deleteSelection()
-				_ = sc
-				_ = el
-				_ = ec
 				return
 			}
+
 			lineRunes := []rune(currentLines[cl])
 			if cc < len(lineRunes) {
-				newVal := string(lineRunes[:cc]) + string(lineRunes[cc+1:])
-				currentLines[cl] = newVal
-				onChange(strings.Join(currentLines, "\n"))
+				newValLine := string(lineRunes[:cc]) + string(lineRunes[cc+1:])
+				currentLines[cl] = newValLine
+				newVal := strings.Join(currentLines, "\n")
+				s.value = newVal
+				onChange(newVal)
 			} else if cl < len(currentLines)-1 {
 				nextLineRunes := []rune(currentLines[cl+1])
 				currentLines[cl] = string(lineRunes) + string(nextLineRunes)
 				newLines := append(currentLines[:cl+1], currentLines[cl+2:]...)
-				onChange(strings.Join(newLines, "\n"))
+
+				newVal := strings.Join(newLines, "\n")
+				s.value = newVal
+				onChange(newVal)
 			}
 		case "ctrl+a":
 			setDragStartLine(0)
@@ -411,15 +466,20 @@ func TextBox(props any) vdom.Node {
 			text, err := utils.ReadClipboard()
 			if err == nil && len(text) > 0 {
 				deleteSelection()
-				currentLines := strings.Split(stateRef.Value.value, "\n")
-				cl, cc := stateRef.Value.cursorLine, stateRef.Value.cursorCol
+				// re-read state after deletion
+				currentLines = strings.Split(s.value, "\n")
+				cl, cc = s.cursorLine, s.cursorCol
+
 				lineRunes := []rune(currentLines[cl])
 				pastedLines := strings.Split(text, "\n")
 				if len(pastedLines) == 1 {
-					newVal := string(lineRunes[:cc]) + text + string(lineRunes[cc:])
-					currentLines[cl] = newVal
-					onChange(strings.Join(currentLines, "\n"))
-					setCursorCol(cc + utf8.RuneCountInString(text))
+					newValLine := string(lineRunes[:cc]) + text + string(lineRunes[cc:])
+					currentLines[cl] = newValLine
+					newVal := strings.Join(currentLines, "\n")
+					s.value = newVal
+					s.cursorCol = cc + utf8.RuneCountInString(text)
+					onChange(newVal)
+					setCursorCol(s.cursorCol)
 				} else {
 					firstPart := string(lineRunes[:cc]) + pastedLines[0]
 					lastPart := pastedLines[len(pastedLines)-1] + string(lineRunes[cc:])
@@ -430,9 +490,15 @@ func TextBox(props any) vdom.Node {
 					}
 					newLines = append(newLines, lastPart)
 					newLines = append(newLines, currentLines[cl+1:]...)
-					onChange(strings.Join(newLines, "\n"))
-					setCursorLine(cl + len(pastedLines) - 1)
-					setCursorCol(utf8.RuneCountInString(pastedLines[len(pastedLines)-1]))
+
+					newVal := strings.Join(newLines, "\n")
+					s.value = newVal
+					s.cursorLine = cl + len(pastedLines) - 1
+					s.cursorCol = utf8.RuneCountInString(pastedLines[len(pastedLines)-1])
+
+					onChange(newVal)
+					setCursorLine(s.cursorLine)
+					setCursorCol(s.cursorCol)
 				}
 			}
 		default:
@@ -440,17 +506,24 @@ func TextBox(props any) vdom.Node {
 				r, _ := utf8.DecodeRuneInString(event.Key)
 				if r >= 32 {
 					deleteSelection()
-					currentLines := strings.Split(stateRef.Value.value, "\n")
-					cl, cc := stateRef.Value.cursorLine, stateRef.Value.cursorCol
+					// re-read state
+					currentLines = strings.Split(s.value, "\n")
+					cl, cc = s.cursorLine, s.cursorCol
+
 					lineRunes := []rune(currentLines[cl])
-					newVal := string(lineRunes[:cc]) + event.Key + string(lineRunes[cc:])
-					currentLines[cl] = newVal
-					onChange(strings.Join(currentLines, "\n"))
+					newValLine := string(lineRunes[:cc]) + event.Key + string(lineRunes[cc:])
+					currentLines[cl] = newValLine
+					newVal := strings.Join(currentLines, "\n")
+
+					s.value = newVal
+					s.cursorCol = cc + 1
+
+					onChange(newVal)
 					setCursorCol(cc + 1)
 				}
 			}
 		}
-	}, []any{value, cursorLine, cursorCol, scrollTop, focused, dragStartLine, dragStartCol})
+	}, []any{focused, readOnly})
 
 	contentChildren := []vdom.Node{}
 	visibleLines := height
