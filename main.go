@@ -90,12 +90,12 @@ func createApp(props any, debugMode bool) vdom.Node {
 	menuY, setMenuY := hooks.UseState[int](hooksCtx, 0)
 	refreshJoke, setRefreshJoke := hooks.UseState[bool](hooksCtx, false)
 
-	jokeRes := hooks.UseFetch[ChuckNorrisJoke](hooksCtx, fmt.Sprintf(chuckNorrisAPI, boolToInt(refreshJoke)))
+	jokeRes := hooks.UseFetch[ChuckNorrisJoke](hooksCtx, fmt.Sprintf("https://api.chucknorris.io/jokes/random?t=%v", refreshJoke))
 	textBoxValue, _ := hooks.UseState[string](hooksCtx, "")
-	if jokeRes.Loading {
-		textBoxValue = "Loading..."
+	if jokeRes.Loading && jokeRes.Data.Value == "" {
+		textBoxValue = "Loading chuck norris joke..."
 	} else if jokeRes.Error != nil {
-		textBoxValue = "Error"
+		textBoxValue = fmt.Sprintf("Error loading joke: %v", jokeRes.Error)
 	} else {
 		textBoxValue = jokeRes.Data.Value
 	}
@@ -115,12 +115,6 @@ func createApp(props any, debugMode bool) vdom.Node {
 			}
 		case "r":
 			setRandomMode(!randomMode)
-		case "tab":
-			if key.Shift {
-				focusMgr.FocusPrev()
-			} else {
-				focusMgr.FocusNext()
-			}
 		}
 	}, []any{count, randomMode, fibIndex})
 
@@ -130,20 +124,26 @@ func createApp(props any, debugMode bool) vdom.Node {
 		Padding:     1,
 		Style:       c.StyleProps{Width: rootWidth, Background: "black"},
 		OnClick: func(e events.MouseEvent) {
-			if e.Action == events.MouseActionPress && e.Button == events.MouseButtonRight {
-				setMenuX(e.ScreenX)
-				setMenuY(e.ScreenY)
-				setShowMenu(true)
+			if e.Action == events.MouseActionPress {
+				if e.Button == events.MouseButtonRight {
+					setMenuX(e.ScreenX)
+					setMenuY(e.ScreenY)
+					setShowMenu(true)
+				} else {
+					// Clear focus on background click
+					focusMgr.Blur()
+				}
 			}
 		},
 	},
 		c.Box(c.BoxProps{
 			BorderStyle: c.BorderStyleNone,
-			Style:       c.StyleProps{Display: c.DisplayFlex, FlexDirection: c.FlexDirectionRow, JustifyContent: c.JustifyContentSpaceBetween, Background: "blue"},
+			Style:       c.StyleProps{Position: c.PositionFixed, Top: 0, Left: 0, Width: rootWidth, Display: c.DisplayFlex, FlexDirection: c.FlexDirectionRow, JustifyContent: c.JustifyContentSpaceBetween, Background: "blue", ZIndex: 100},
 		},
 			c.Text(c.TextProps{Content: " RECLINER DASHBOARD ", Style: c.TextStyle().Bold().Color("white")}),
 			c.Text(c.TextProps{Content: time.Now().Format(" 15:04:05 "), Style: c.TextStyle().Color("whiteBright")}),
 		),
+		c.Spacer(1), // Spacer for the fixed header
 		c.Spacer(1),
 		c.Box(c.BoxProps{
 			BorderStyle: c.BorderStyleNone,
@@ -154,7 +154,7 @@ func createApp(props any, debugMode bool) vdom.Node {
 		c.Text(c.TextProps{Content: fmt.Sprintf(" Status: %s ", effectMsg), Style: c.TextStyle().BG("gray").Color("black")}),
 		c.Spacer(1),
 		c.Box(c.BoxProps{
-			BorderStyle: c.BorderStyleSingle, BorderColor: "cyan",
+			BorderStyle: c.BorderStyleClassic, BorderColor: "cyan",
 			Style: c.StyleProps{Display: c.DisplayFlex, FlexDirection: c.FlexDirectionRow, Gap: 2, Background: "black"},
 		},
 			c.Box(c.BoxProps{BorderStyle: c.BorderStyleNone, Style: c.StyleProps{Background: "red"}},
@@ -204,7 +204,8 @@ func createApp(props any, debugMode bool) vdom.Node {
 			},
 		},
 			c.Tabs(c.TabsProps{
-				ID: "main-tabs",
+				ID:            "main-tabs",
+				DefaultActive: "tab-joke",
 				Items: []c.TabItem{
 					{
 						ID: "tab-joke", Title: "Daily Joke",
@@ -331,7 +332,7 @@ func boolToInt(b bool) int {
 func UseSystemStats(hc *hooks.HooksContext) SystemStats {
 	stats, setStats := hooks.UseState[SystemStats](hc, SystemStats{})
 	hc.UseEffect(func() func() {
-		ticker := time.NewTicker(1 * time.Second)
+		ticker := time.NewTicker(2 * time.Second)
 		done := make(chan struct{})
 		updateStats := func() {
 			v, _ := mem.VirtualMemory()

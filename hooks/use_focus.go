@@ -22,9 +22,11 @@ type FocusResult struct {
 func (hc *HooksContext) UseFocus(opts FocusOptions) FocusResult {
 	hc.mu.Lock()
 	// Register this ID for the current render pass so manager knows it exists
-	exists := slices.Contains(hc.FocusableIDs, opts.ID)
-	if !exists {
-		hc.FocusableIDs = append(hc.FocusableIDs, opts.ID)
+	if opts.ID != "" {
+		exists := slices.Contains(hc.FocusableIDs, opts.ID)
+		if !exists {
+			hc.FocusableIDs = append(hc.FocusableIDs, opts.ID)
+		}
 	}
 
 	// AutoFocus logic: if no focus set, set this one
@@ -32,7 +34,7 @@ func (hc *HooksContext) UseFocus(opts FocusOptions) FocusResult {
 		hc.FocusID = opts.ID
 	}
 
-	isFocused := hc.FocusID == opts.ID
+	isFocused := opts.ID != "" && hc.FocusID == opts.ID
 	hc.mu.Unlock()
 
 	focus := func() {

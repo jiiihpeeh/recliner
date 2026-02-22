@@ -323,6 +323,21 @@ func (a *App) inputLoop() {
 			switch e := event.(type) {
 			case *events.KeyPressEvent:
 				hooks.LogKeyPress(*e)
+
+				// Global scroll keys if nothing is focused or specific keys are used
+				if e.Key == "pageup" && a.hooksCtx.FocusID == "" {
+					a.Scroll(-10)
+				} else if e.Key == "pagedown" && a.hooksCtx.FocusID == "" {
+					a.Scroll(10)
+				}
+
+				if e.Key == "ctrl+c" {
+					logDebug("INPUT", "Ctrl+C detected in loop, exiting")
+					a.Exit()
+					return
+				}
+
+				logDebug("INPUT", fmt.Sprintf("Processing handlers for key: %s", e.Key))
 				handlers := a.hooksCtx.GetInputHandlers()
 				for _, h := range handlers {
 					func() {
@@ -333,9 +348,6 @@ func (a *App) inputLoop() {
 						}()
 						h(*e)
 					}()
-				}
-				if e.Key == "ctrl+c" {
-					a.Exit()
 				}
 
 			case *events.MouseEvent:
@@ -365,7 +377,29 @@ func (a *App) inputLoop() {
 
 				// Standard Hit Test
 				switch e.Action {
+				case events.MouseActionScrollUp:
+					handler := a.renderer.HitTest(adjustedEvent)
+					if handler == nil {
+						a.Scroll(-3)
+					} else {
+						// Component might handle scroll
+						handler(adjustedEvent)
+					}
+				case events.MouseActionScrollDown:
+					handler := a.renderer.HitTest(adjustedEvent)
+					if handler == nil {
+						a.Scroll(3)
+					} else {
+						handler(adjustedEvent)
+					}
 				case events.MouseActionPress: // Only new presses trigger hit tests if not capturing
+					if e.Button == events.MouseButtonLeft {
+						// Default behavior: click anywhere blurs current focus.
+						// If the clicked element is focusable, its handler will call Focus()
+						// and restore it.
+						a.hooksCtx.UseFocusManager().Blur()
+					}
+
 					handler := a.renderer.HitTest(adjustedEvent)
 					if handler != nil {
 						a.mouseCapture = handler // Start capture
@@ -586,9 +620,14 @@ func (a *App) parseInput(buf []byte) interface{} {
 }
 
 func (a *App) onUpdate() {
+	if atomic.LoadInt32(&a.running) == 0 {
+		return
+	}
 	atomic.StoreInt32(&a.needsRender, 1)
 	logDebug("APP", "onUpdate called, triggering render")
-	a.render()
+
+	// Try to render immediately if possible
+	go a.render()
 }
 
 func (a *App) render() {
@@ -648,12 +687,17 @@ func (a *App) render() {
 		}
 
 		// Flush effects after paint
+		// WARNING: Hooks might trigger updates!
+		// To prevent infinite loops or deep recursion, we check needsRender
 		a.hooksCtx.FlushLayoutEffects()
 		a.hooksCtx.FlushEffects()
 
 		if atomic.LoadInt32(&a.needsRender) == 0 {
 			break
 		}
+
+		// Optional: prevent CPU pegging if something is constantly updating
+		// time.Sleep(1 * time.Millisecond)
 	}
 }
 
@@ -681,26 +725,33 @@ func (a *App) RunHeadless() (string, error) {
 
 func (a *App) Exit() {
 	logDebug("APP", "Exit() called")
+	// ... (omitted)
+}
 
-	if atomic.LoadInt32(&a.exiting) == 1 {
-		return
-	}
-	atomic.StoreInt32(&a.exiting, 1)
-	atomic.StoreInt32(&a.running, 0)
-	a.hooksCtx.Cleanup()
-	a.teardownTerminal()
+func (a *App) Scroll(delta int) {
+	newScrollY := atomic.LoadInt64(&a.scrollY) + int64(delta)
 
-	// Stop debug server if it was started
-	if a.debug {
-		debug.StopDebugServer()
-	}
+	// Clamp scroll
+	contentHeight := a.renderer.GetContentHeight()
+	_, termHeight := a.renderer.GetSize()
 
-	logDebug("APP", "Exiting now")
-	if logFile != nil {
-		logFile.Close()
+	maxScroll := int64(contentHeight - termHeight)
+	if maxScroll < 0 {
+		maxScroll = 0
 	}
 
-	os.Exit(0)
+	if newScrollY < 0 {
+		newScrollY = 0
+	}
+	if newScrollY > maxScroll {
+		newScrollY = maxScroll
+	}
+
+	if newScrollY != atomic.LoadInt64(&a.scrollY) {
+		atomic.StoreInt64(&a.scrollY, newScrollY)
+		a.renderer.SetViewScroll(0, int(newScrollY))
+		a.onUpdate()
+	}
 }
 
 func (a *App) enterAltScreen() {

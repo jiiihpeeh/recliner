@@ -25,6 +25,12 @@ type textBoxInternalState struct {
 	onChange   func(string)
 }
 
+type visualLine struct {
+	physicalLineIdx int
+	startRuneIdx    int
+	content         string
+}
+
 func TextBox(props any) vdom.Node {
 	hc := hooks.GetContext()
 
@@ -79,18 +85,50 @@ func TextBox(props any) vdom.Node {
 		return func() { ticker.Stop(); close(done) }
 	}, []any{focused})
 
-	lines := strings.Split(value, "\n")
-	if cursorLine >= len(lines) {
-		setCursorLine(len(lines) - 1)
-		cursorLine = len(lines) - 1
+	physicalLines := strings.Split(value, "\n")
+	if cursorLine >= len(physicalLines) {
+		setCursorLine(len(physicalLines) - 1)
+		cursorLine = len(physicalLines) - 1
 	}
 	if cursorLine < 0 {
 		cursorLine = 0
 	}
-	runes := []rune(lines[cursorLine])
+	runes := []rune(physicalLines[cursorLine])
 	if cursorCol > len(runes) {
 		setCursorCol(len(runes))
 		cursorCol = len(runes)
+	}
+
+	// Padding is 1, Border is 1 on each side = 4 units
+	currentTextWidth := width - 4
+	if scrollable {
+		currentTextWidth -= 1 // Space for scrollbar
+	}
+	if currentTextWidth < 1 {
+		currentTextWidth = 1
+	}
+
+	var visualLines []visualLine
+	for i, pl := range physicalLines {
+		ps := utils.NewStr(pl)
+		if ps.Length() == 0 {
+			visualLines = append(visualLines, visualLine{
+				physicalLineIdx: i,
+				startRuneIdx:    0,
+				content:         "",
+			})
+			continue
+		}
+		wrapped := ps.Wrap(currentTextWidth)
+		startIdx := 0
+		for _, wl := range wrapped {
+			visualLines = append(visualLines, visualLine{
+				physicalLineIdx: i,
+				startRuneIdx:    startIdx,
+				content:         wl.Value(),
+			})
+			startIdx += wl.Length()
+		}
 	}
 
 	stateRef := hooks.UseRef(hc, &textBoxInternalState{})
@@ -106,8 +144,8 @@ func TextBox(props any) vdom.Node {
 		if onClick, ok := util.GetProp[func(events.MouseEvent)](props, "onClick"); ok {
 			onClick(e)
 		}
-		if !s.focused && e.Action == events.MouseActionPress {
-			focusRes.Focus()
+		if e.Action == events.MouseActionPress {
+			hc.UseFocusManager().Focus(id)
 		}
 
 		if readOnly {
@@ -120,12 +158,13 @@ func TextBox(props any) vdom.Node {
 		if clickLineIdx < 0 {
 			clickLineIdx = 0
 		}
-		if clickLineIdx >= len(lines) {
-			clickLineIdx = len(lines) - 1
+		if clickLineIdx >= len(visualLines) {
+			clickLineIdx = len(visualLines) - 1
 		}
 
 		clickRelX := e.RelX - 1
-		clickRunes := []rune(lines[clickLineIdx])
+		vl := visualLines[clickLineIdx]
+		clickRunes := []rune(vl.content)
 		currentVisualX, clickColIdx := 0, len(clickRunes)
 		for i, r := range clickRunes {
 			rw := runewidth.RuneWidth(r)
@@ -141,15 +180,15 @@ func TextBox(props any) vdom.Node {
 
 		switch e.Action {
 		case events.MouseActionPress:
-			setCursorLine(clickLineIdx)
-			setCursorCol(clickColIdx)
-			setDragStartLine(clickLineIdx)
-			setDragStartCol(clickColIdx)
+			setCursorLine(vl.physicalLineIdx)
+			setCursorCol(vl.startRuneIdx + clickColIdx)
+			setDragStartLine(vl.physicalLineIdx)
+			setDragStartCol(vl.startRuneIdx + clickColIdx)
 			setIsDragging(true)
 		case events.MouseActionMotion:
 			if isDragging {
-				setCursorLine(clickLineIdx)
-				setCursorCol(clickColIdx)
+				setCursorLine(vl.physicalLineIdx)
+				setCursorCol(vl.startRuneIdx + clickColIdx)
 			}
 		case events.MouseActionRelease:
 			setIsDragging(false)
@@ -203,26 +242,62 @@ func TextBox(props any) vdom.Node {
 		switch event.Key {
 		case "up":
 			setDragStartLine(-1)
-			if cl > 0 {
-				setCursorLine(cl - 1)
-				prevRunes := []rune(currentLines[cl-1])
-				if cc > len(prevRunes) {
-					setCursorCol(len(prevRunes))
+			// Find current visual line
+			currentVisualLineIdx := -1
+			for i, vl := range visualLines {
+				if vl.physicalLineIdx == cl && cc >= vl.startRuneIdx && cc <= vl.startRuneIdx+len([]rune(vl.content)) {
+					// Disambiguate if cursor is at the boundary of two visual lines
+					if cc == vl.startRuneIdx+len([]rune(vl.content)) && i+1 < len(visualLines) && visualLines[i+1].physicalLineIdx == cl && visualLines[i+1].startRuneIdx == cc {
+						// Cursor is at the very end of this visual line, but also at the start of next.
+						// Usually we prefer showing it at the start of next, but if we are moving UP,
+						// we might already be on the "start of next" one.
+						continue
+					}
+					currentVisualLineIdx = i
+					break
 				}
-				if cl-1 < scrollTop {
-					setScrollTop(cl - 1)
+			}
+
+			if currentVisualLineIdx > 0 {
+				prevVl := visualLines[currentVisualLineIdx-1]
+				setCursorLine(prevVl.physicalLineIdx)
+				// Try to maintain column position (best effort)
+				offsetInCurrent := cc - visualLines[currentVisualLineIdx].startRuneIdx
+				newCol := prevVl.startRuneIdx + offsetInCurrent
+				if newCol > prevVl.startRuneIdx+len([]rune(prevVl.content)) {
+					newCol = prevVl.startRuneIdx + len([]rune(prevVl.content))
+				}
+				setCursorCol(newCol)
+
+				if currentVisualLineIdx-1 < scrollTop {
+					setScrollTop(currentVisualLineIdx - 1)
 				}
 			}
 		case "down":
 			setDragStartLine(-1)
-			if cl < len(currentLines)-1 {
-				setCursorLine(cl + 1)
-				nextRunes := []rune(currentLines[cl+1])
-				if cc > len(nextRunes) {
-					setCursorCol(len(nextRunes))
+			// Find current visual line
+			currentVisualLineIdx := -1
+			for i, vl := range visualLines {
+				if vl.physicalLineIdx == cl && cc >= vl.startRuneIdx && cc <= vl.startRuneIdx+len([]rune(vl.content)) {
+					currentVisualLineIdx = i
+					// Prefer the first visual line that matches (start of line)
+					break
 				}
-				if cl+1 >= scrollTop+height {
-					setScrollTop(cl + 1 - height + 1)
+			}
+
+			if currentVisualLineIdx != -1 && currentVisualLineIdx < len(visualLines)-1 {
+				nextVl := visualLines[currentVisualLineIdx+1]
+				setCursorLine(nextVl.physicalLineIdx)
+				// Try to maintain column position
+				offsetInCurrent := cc - visualLines[currentVisualLineIdx].startRuneIdx
+				newCol := nextVl.startRuneIdx + offsetInCurrent
+				if newCol > nextVl.startRuneIdx+len([]rune(nextVl.content)) {
+					newCol = nextVl.startRuneIdx + len([]rune(nextVl.content))
+				}
+				setCursorCol(newCol)
+
+				if currentVisualLineIdx+1 >= scrollTop+height {
+					setScrollTop(currentVisualLineIdx + 1 - height + 1)
 				}
 			}
 		case "left":
@@ -388,18 +463,18 @@ func TextBox(props any) vdom.Node {
 		}
 	}
 
-	currentTextWidth := width - 2
+	currentTextWidth = width - 2
 	if scrollable {
 		currentTextWidth -= 1
 	}
 
 	for i := 0; i < visibleLines; i++ {
 		actualLineIdx := i + scrollTop
-		if actualLineIdx >= len(lines) {
+		if actualLineIdx >= len(visualLines) {
 			break
 		}
-		line := lines[actualLineIdx]
-		runes := []rune(line)
+		vl := visualLines[actualLineIdx]
+		runes := []rune(vl.content)
 		var lineChildren []vdom.Node
 		cvw := 0
 		for charIdx, r := range runes {
@@ -407,23 +482,30 @@ func TextBox(props any) vdom.Node {
 			if rw == 0 {
 				rw = 1
 			}
+			// In wrapped mode, we don't break if cvw+rw > currentTextWidth because we already wrapped
+			// but we still keep it for safety.
 			if cvw+rw > currentTextWidth {
 				break
 			}
+
+			// actualRuneIdx in the physical line
+			actualRuneIdx := vl.startRuneIdx + charIdx
+
 			isSelected := false
 			if sl != -1 {
-				if actualLineIdx > sl && actualLineIdx < el {
+				// Selection logic needs to be aware of physical lines and rune indices
+				if vl.physicalLineIdx > sl && vl.physicalLineIdx < el {
 					isSelected = true
-				} else if actualLineIdx == sl && actualLineIdx == el {
-					if charIdx >= sc && charIdx < ec {
+				} else if vl.physicalLineIdx == sl && vl.physicalLineIdx == el {
+					if actualRuneIdx >= sc && actualRuneIdx < ec {
 						isSelected = true
 					}
-				} else if actualLineIdx == sl {
-					if charIdx >= sc {
+				} else if vl.physicalLineIdx == sl {
+					if actualRuneIdx >= sc {
 						isSelected = true
 					}
-				} else if actualLineIdx == el {
-					if charIdx < ec {
+				} else if vl.physicalLineIdx == el {
+					if actualRuneIdx < ec {
 						isSelected = true
 					}
 				}
@@ -432,7 +514,7 @@ func TextBox(props any) vdom.Node {
 			if isSelected {
 				charStyle.Reverse = true
 			}
-			if focused && showCursor && actualLineIdx == cursorLine && charIdx == cursorCol {
+			if focused && showCursor && vl.physicalLineIdx == cursorLine && actualRuneIdx == cursorCol {
 				charStyle.Reverse, charStyle.Underline = true, true
 			}
 			lineChildren = append(lineChildren, &vdom.Element{
@@ -447,7 +529,28 @@ func TextBox(props any) vdom.Node {
 			})
 			cvw += rw
 		}
-		if focused && showCursor && actualLineIdx == cursorLine && cursorCol == len(runes) && cvw < currentTextWidth {
+
+		// Determine if the cursor should be at the end of THIS visual line
+		// This happens if:
+		// 1. Cursor is on this physical line
+		// 2. Cursor is at the end of the content of this visual line
+		// 3. AND either this is the last visual line for this physical line OR the cursor is not at the start of the next visual line (which is redundant)
+
+		// Actually, simpler: if cursor physical line/col matches this visual line's end
+		isAtEndOfVisualLine := focused && showCursor && vl.physicalLineIdx == cursorLine && cursorCol == (vl.startRuneIdx+len(runes))
+
+		// But wait, if a physical line is wrapped into 2 visual lines, the cursor at the end of visual 1
+		// is the same as cursor at the start of visual 2.
+		// Usually we show it at the start of visual 2 unless it's the very end of the physical line.
+
+		isLastVisualLineOfPhysicalLine := true
+		if actualLineIdx+1 < len(visualLines) {
+			if visualLines[actualLineIdx+1].physicalLineIdx == vl.physicalLineIdx {
+				isLastVisualLineOfPhysicalLine = false
+			}
+		}
+
+		if isAtEndOfVisualLine && isLastVisualLineOfPhysicalLine && cvw < currentTextWidth {
 			rsStyle := vdom.Style{Reverse: true, Display: "inline"}
 			lineChildren = append(lineChildren, &vdom.Element{
 				Type: "text",
@@ -476,7 +579,7 @@ func TextBox(props any) vdom.Node {
 	}
 
 	if scrollable {
-		total := len(lines)
+		total := len(visualLines)
 		barLength := height
 		thumbSize := (barLength * barLength) / total
 		if thumbSize < 1 {
@@ -540,7 +643,7 @@ func TextBox(props any) vdom.Node {
 		rowStyle := vdom.Style{Display: "flex", FlexDirection: "row"}
 		borderSpace := 1
 		innerWidth := width - (borderSpace * 2)
-		cElemStyle := vdom.Style{Width: innerWidth - 1, Height: height + 2}
+		cElemStyle := vdom.Style{Width: innerWidth - 1, Height: height}
 		contentElem := &vdom.Element{
 			Type: "box",
 			Props: struct {
@@ -549,7 +652,7 @@ func TextBox(props any) vdom.Node {
 				Style       vdom.Style
 				OnClick     func(events.MouseEvent)
 			}{
-				Padding:     1,
+				Padding:     0,
 				BorderStyle: "none",
 				Style:       cElemStyle,
 				OnClick:     handleMouse,
@@ -557,7 +660,7 @@ func TextBox(props any) vdom.Node {
 			Children: contentChildren,
 			Style:    cElemStyle,
 		}
-		rootStyle := vdom.Style{Width: width, Height: height + 4}
+		rootStyle := vdom.Style{Width: width, Height: height + 2}
 		return &vdom.Element{
 			Type: "box",
 			Props: struct {
@@ -585,7 +688,7 @@ func TextBox(props any) vdom.Node {
 		}
 	}
 
-	rootStyle := vdom.Style{Width: width, Height: height + 4}
+	rootStyle := vdom.Style{Width: width, Height: height + 2}
 	return &vdom.Element{
 		Type: "box",
 		Props: struct {
@@ -597,7 +700,7 @@ func TextBox(props any) vdom.Node {
 		}{
 			BorderStyle: "single",
 			BorderColor: "blue",
-			Padding:     1,
+			Padding:     0,
 			Style:       rootStyle,
 			OnClick:     handleMouse,
 		},

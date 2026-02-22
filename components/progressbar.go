@@ -82,12 +82,18 @@ func ProgressBar(props any) vdom.Node {
 
 		// Inject label inside if requested
 		if labelPos == "inside-left" {
-			if len(fullBar) >= len(percentText) {
-				fullBar = percentText + fullBar[len(percentText):]
+			labelRunes := []rune(percentText)
+			fullRunes := []rune(fullBar)
+			if len(fullRunes) >= len(labelRunes) {
+				copy(fullRunes[0:], labelRunes)
+				fullBar = string(fullRunes)
 			}
 		} else if labelPos == "inside-right" {
-			if len(fullBar) >= len(percentText) {
-				fullBar = fullBar[:len(fullBar)-len(percentText)] + percentText
+			labelRunes := []rune(percentText)
+			fullRunes := []rune(fullBar)
+			if len(fullRunes) >= len(labelRunes) {
+				copy(fullRunes[len(fullRunes)-len(labelRunes):], labelRunes)
+				fullBar = string(fullRunes)
 			}
 		}
 

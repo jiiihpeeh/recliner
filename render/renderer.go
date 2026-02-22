@@ -20,6 +20,7 @@ type Layout struct{ X, Y, Width, Height int }
 
 type HitArea struct {
 	XStart, XEnd, YStart, YEnd int
+	Fixed                      bool
 	Handler                    func(events.MouseEvent)
 }
 
@@ -189,6 +190,7 @@ var bgColorCodes = map[string]string{
 type Renderer struct {
 	mu                       sync.Mutex
 	width, height            int
+	contentHeight            int
 	measureCache             map[measureKey]Layout
 	hitAreas                 []HitArea
 	viewScrollX, viewScrollY int
@@ -218,6 +220,12 @@ func (r *Renderer) GetSize() (int, int) {
 	return r.width, r.height
 }
 
+func (r *Renderer) GetContentHeight() int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.contentHeight
+}
+
 func (r *Renderer) updateTerminalSize() {
 	if w, h, err := term.GetSize(int(os.Stdout.Fd())); err == nil {
 		r.width, r.height = w, h
@@ -229,9 +237,16 @@ func (r *Renderer) HitTest(event events.MouseEvent) func(events.MouseEvent) {
 	defer r.mu.Unlock()
 	for i := len(r.hitAreas) - 1; i >= 0; i-- {
 		area := r.hitAreas[i]
-		if event.X >= area.XStart && event.X < area.XEnd && event.Y >= area.YStart && event.Y < area.YEnd {
+
+		targetX, targetY := event.X, event.Y
+		if !area.Fixed {
+			targetX += r.viewScrollX
+			targetY += r.viewScrollY
+		}
+
+		if targetX >= area.XStart && targetX < area.XEnd && targetY >= area.YStart && targetY < area.YEnd {
 			return func(evt events.MouseEvent) {
-				evt.RelX, evt.RelY = evt.X-area.XStart, evt.Y-area.YStart
+				evt.RelX, evt.RelY = targetX-area.XStart, targetY-area.YStart
 				area.Handler(evt)
 			}
 		}
@@ -246,38 +261,38 @@ func (r *Renderer) SetViewScroll(x, y int) {
 }
 
 func (r *Renderer) Render(node vdom.Node) string {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	r.frameCount++
-
-	// Always clear measure cache between frames because pointer reuse by GC
-	// causes collisions (e.g. new node gets same address as old node -> stale layout)
-	r.measureCache = make(map[measureKey]Layout)
-
+	// 1. Measure & Layout
 	ctx := &RenderContext{
 		renderer: r,
 		layouts:  make(map[vdom.Node]Layout),
 
-		measureCache: r.measureCache,
+		measureCache: make(map[measureKey]Layout), // Temporary cache for this frame
 		width:        r.width,
 		height:       r.height,
 	}
 
-	// 1. Measure & Layout
 	ctx.measureNode(node, ctx.width)
 	ctx.layoutNode(node, 0, 0)
 
-	// 2. Determine buffer size
-	// We strictly use the terminal size for the buffer to prevent drawing out of bounds.
-	// Content larger than the terminal will be clipped.
-	// Ideally, scrolling should be handled by a ScrollView component or similar logic
-	// that translates the root node.
-	bufW, bufH := ctx.width, ctx.height
+	// Determine total content size
+	maxExtent := 0
+	for _, l := range ctx.layouts {
+		extent := l.Y + l.Height
+		if extent > maxExtent {
+			maxExtent = extent
+		}
+	}
 
-	// 3. Draw
+	r.mu.Lock()
+	r.contentHeight = maxExtent
+	r.frameCount++
+
+	bufW, bufH := r.width, r.height
+	r.mu.Unlock()
+
+	// 2. Buffer & Draw
 	buffer := NewBuffer(bufW, bufH)
-	ctx.collectDrawTasks(node, Layout{0, 0, bufW, bufH}, "", 0)
+	ctx.collectDrawTasks(node, Layout{0, 0, bufW, bufH}, "", 0, false)
 
 	util.StableSort(ctx.tasks, func(i, j int) bool {
 		if ctx.tasks[i].zIndex != ctx.tasks[j].zIndex {
@@ -290,6 +305,7 @@ func (r *Renderer) Render(node vdom.Node) string {
 		ctx.executeTask(task, buffer)
 	}
 
+	r.mu.Lock()
 	r.hitAreas = ctx.hitAreas
 
 	var output string
@@ -302,6 +318,8 @@ func (r *Renderer) Render(node vdom.Node) string {
 	}
 
 	r.lastBuffer = buffer
+	r.mu.Unlock()
+
 	return output
 }
 
@@ -374,13 +392,14 @@ func (ctx *RenderContext) measureNode(node vdom.Node, maxWidth int) Layout {
 	case *vdom.TextNode:
 		res = ctx.measureText(n.Content)
 	case *vdom.Element:
-		if n.Type == "text" {
+		switch n.Type {
+		case "text":
 			res = ctx.measureText(n.InnerText)
-		} else if n.Type == "image" {
+		case "image":
 			w, _ := util.GetProp[int](n.Props, "width")
 			h, _ := util.GetProp[int](n.Props, "height")
 			res = Layout{Width: w, Height: h}
-		} else {
+		default:
 			res = ctx.measureBox(n, maxWidth)
 		}
 	case *vdom.Fragment:
@@ -538,8 +557,9 @@ func (ctx *RenderContext) layoutNode(node vdom.Node, x, y int) {
 
 	switch n := node.(type) {
 	case *vdom.Element:
-		if handler, ok := util.GetProp[func(events.MouseEvent)](n.Props, "onClick"); ok {
-			ctx.hitAreas = append(ctx.hitAreas, HitArea{x, x + l.Width, y, y + l.Height, handler})
+		if handler, ok := util.GetProp[func(events.MouseEvent)](n.Props, "onClick"); ok && handler != nil {
+			isFixed := n.Style.Position == "fixed"
+			ctx.hitAreas = append(ctx.hitAreas, HitArea{x, x + l.Width, y, y + l.Height, isFixed, handler})
 		}
 		p, _ := util.GetProp[int](n.Props, "padding")
 		bs := util.Ternary(util.GetPropString(n.Props, "borderStyle") == "none", 0, 1)
@@ -671,7 +691,7 @@ func (ctx *RenderContext) applyAlignment(n *vdom.Element, cl Layout, cs vdom.Sty
 	return tx, ty
 }
 
-func (ctx *RenderContext) collectDrawTasks(node vdom.Node, clip Layout, inheritedBG string, zIndex int) {
+func (ctx *RenderContext) collectDrawTasks(node vdom.Node, clip Layout, inheritedBG string, zIndex int, isFixed bool) {
 	if node == nil {
 		return
 	}
@@ -679,8 +699,6 @@ func (ctx *RenderContext) collectDrawTasks(node vdom.Node, clip Layout, inherite
 	order := len(ctx.tasks)
 
 	switch n := node.(type) {
-	case *vdom.TextNode:
-		ctx.tasks = append(ctx.tasks, drawTask{n, layout, clip, inheritedBG, zIndex, order})
 	case *vdom.Element:
 		effBG := n.Style.Background
 		if effBG == "" {
@@ -691,28 +709,48 @@ func (ctx *RenderContext) collectDrawTasks(node vdom.Node, clip Layout, inherite
 			localZ = n.Style.ZIndex
 		}
 
+		fixed := isFixed || n.Style.Position == "fixed"
+
+		// Apply global scroll if not fixed
+		drawLayout := layout
+		if !fixed {
+			drawLayout.X -= ctx.renderer.viewScrollX
+			drawLayout.Y -= ctx.renderer.viewScrollY
+		}
+
 		if n.Type == "text" || n.Type == "image" || n.Type == "box" {
-			ctx.tasks = append(ctx.tasks, drawTask{n, layout, clip, inheritedBG, localZ, order})
+			ctx.tasks = append(ctx.tasks, drawTask{n, drawLayout, clip, inheritedBG, localZ, order})
 		}
 
 		childClip := clip
 		if n.Type == "box" {
 			p, _ := util.GetProp[int](n.Props, "padding")
 			bs := util.Ternary(util.GetPropString(n.Props, "borderStyle") == "none", 0, 1)
-			cr := Layout{layout.X + bs + p, layout.Y + bs + p, layout.Width - (bs * 2) - (p * 2), layout.Height - (bs * 2) - (p * 2)}
+			// Intersection needs to be in screen space if clip is in screen space
+			// layout is in canvas space. drawLayout is in screen space.
+			cr := Layout{drawLayout.X + bs + p, drawLayout.Y + bs + p, layout.Width - (bs * 2) - (p * 2), layout.Height - (bs * 2) - (p * 2)}
 			childClip, _ = intersect(cr, clip)
 		}
 
 		for _, child := range n.Children {
 			cc := childClip
+			cf := fixed
 			if ce, ok := child.(*vdom.Element); ok && ce.Style.Position == "fixed" {
 				cc = Layout{0, 0, ctx.renderer.width, ctx.renderer.height}
+				cf = true
 			}
-			ctx.collectDrawTasks(child, cc, effBG, localZ)
+			ctx.collectDrawTasks(child, cc, effBG, localZ, cf)
 		}
+	case *vdom.TextNode:
+		drawLayout := layout
+		if !isFixed {
+			drawLayout.X -= ctx.renderer.viewScrollX
+			drawLayout.Y -= ctx.renderer.viewScrollY
+		}
+		ctx.tasks = append(ctx.tasks, drawTask{n, drawLayout, clip, inheritedBG, zIndex, order})
 	case *vdom.Fragment:
 		for _, child := range n.Children {
-			ctx.collectDrawTasks(child, clip, inheritedBG, zIndex)
+			ctx.collectDrawTasks(child, clip, inheritedBG, zIndex, isFixed)
 		}
 	}
 }
@@ -790,7 +828,7 @@ func (ctx *RenderContext) drawImage(el *vdom.Element, layout Layout, buf *Buffer
 	b := img.Bounds()
 	w, h := b.Dx(), b.Dy()
 	for y := 0; y < h/2; y++ {
-		for x := 0; x < w; x++ {
+		for x := range w {
 			wx, wy := layout.X+x, layout.Y+y
 			if wx < clip.X || wx >= clip.X+clip.Width || wy < clip.Y || wy >= clip.Y+clip.Height {
 				continue
@@ -903,6 +941,14 @@ func getBorderChar(style, side string, idx, total int) rune {
 			return '═'
 		}
 		return '║'
+	case "classic":
+		if side == "top" || side == "bottom" {
+			if idx == 0 || idx == total-1 {
+				return '+'
+			}
+			return '-'
+		}
+		return '|'
 	default:
 		if side == "top" {
 			if idx == 0 {

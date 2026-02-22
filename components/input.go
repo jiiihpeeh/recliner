@@ -5,6 +5,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/j-p/recliner/app"
 	"github.com/j-p/recliner/events"
 	"github.com/j-p/recliner/hooks"
 	"github.com/j-p/recliner/util"
@@ -137,10 +138,13 @@ func Input(props any) vdom.Node {
 		if onClick, ok := util.GetProp[func(events.MouseEvent)](props, "onClick"); ok {
 			onClick(e)
 		}
-		if !s.focused && e.Action == events.MouseActionPress {
-			focusRes.Focus()
+		if e.Action == events.MouseActionPress {
+			app.DebugLog("INPUT", "Click focusing: "+id)
+			// Ensure we are using the manager to avoid any component-local state issues
+			hc.UseFocusManager().Focus(id)
 		}
 		if showPlaceholder {
+
 			if e.Action == events.MouseActionPress {
 				setCursorPos(0)
 				setDragStart(-1)

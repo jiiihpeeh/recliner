@@ -2,6 +2,8 @@ package utils
 
 import (
 	"strings"
+
+	"github.com/mattn/go-runewidth"
 )
 
 // Str is a UTF-8 aware string wrapper that behaves like JavaScript strings.
@@ -291,4 +293,117 @@ func (s Str) PadEnd(targetLength int, padString ...string) Str {
 
 	// Append
 	return Str{runes: append(s.runes, sb...)}
+}
+
+// Wrap splits the string into multiple lines based on the given width.
+// It considers whitespace for better line splitting (word wrapping).
+func (s Str) Wrap(width int) []Str {
+	if width <= 0 {
+		return []Str{s}
+	}
+
+	var result []Str
+	var current []rune
+	currentWidth := 0
+
+	// Helper to add line to results ensuring NO slice sharing
+	flush := func() {
+		if len(current) > 0 {
+			line := make([]rune, len(current))
+			copy(line, current)
+			result = append(result, Str{runes: line})
+			current = nil
+			currentWidth = 0
+		}
+	}
+
+	words := s.splitForWrap()
+
+	for _, word := range words {
+		wordRunes := word.runes
+		wordWidth := 0
+		for _, r := range wordRunes {
+			rw := runewidth.RuneWidth(r)
+			if rw == 0 {
+				rw = 1
+			}
+			wordWidth += rw
+		}
+
+		// If single word is wider than the whole container, character-wrap it
+		if wordWidth > width {
+			flush()
+			for _, r := range wordRunes {
+				rw := runewidth.RuneWidth(r)
+				if rw == 0 {
+					rw = 1
+				}
+				if currentWidth+rw > width {
+					flush()
+				}
+				current = append(current, r)
+				currentWidth += rw
+			}
+			continue
+		}
+
+		if currentWidth+wordWidth > width && len(current) > 0 {
+			flush()
+			// Trim leading spaces when wrapping a word to a new line
+			startIdx := 0
+			for startIdx < len(wordRunes) && wordRunes[startIdx] == ' ' {
+				startIdx++
+			}
+			wordRunes = wordRunes[startIdx:]
+			wordWidth = 0
+			for _, r := range wordRunes {
+				rw := runewidth.RuneWidth(r)
+				if rw == 0 {
+					rw = 1
+				}
+				wordWidth += rw
+			}
+		}
+
+		current = append(current, wordRunes...)
+		currentWidth += wordWidth
+	}
+
+	flush()
+
+	if len(result) == 0 && len(s.runes) == 0 {
+		result = append(result, Str{runes: []rune{}})
+	}
+
+	return result
+}
+
+// splitForWrap divides the string into words and whitespace segments.
+// It keeps consecutive spaces together as a single "word" segment to avoid
+// unnecessary line breaks between multiple spaces.
+func (s Str) splitForWrap() []Str {
+	var result []Str
+	if len(s.runes) == 0 {
+		return result
+	}
+
+	var current []rune
+	inSpace := s.runes[0] == ' '
+
+	for _, r := range s.runes {
+		isSpace := r == ' '
+		if isSpace != inSpace {
+			if len(current) > 0 {
+				result = append(result, Str{runes: current})
+			}
+			current = []rune{r}
+			inSpace = isSpace
+		} else {
+			current = append(current, r)
+		}
+	}
+	if len(current) > 0 {
+		result = append(result, Str{runes: current})
+	}
+	return result
 }

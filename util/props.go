@@ -2,6 +2,7 @@ package util
 
 import (
 	"reflect"
+	"strings"
 )
 
 func GetProp[T any](props any, key string) (T, bool) {
@@ -44,6 +45,28 @@ func GetProp[T any](props any, key string) (T, bool) {
 			capKey := string(rune(key[0]-32)) + key[1:]
 			if key[0] >= 'a' && key[0] <= 'z' {
 				field = v.FieldByName(capKey)
+			}
+		}
+	}
+
+	if !field.IsValid() {
+		// special case for "id" -> "ID"
+		if key == "id" {
+			field = v.FieldByName("ID")
+		}
+	}
+
+	if !field.IsValid() {
+		// Iterate over all fields for case-insensitive match
+		typ := v.Type()
+		for i := 0; i < v.NumField(); i++ {
+			f := typ.Field(i)
+			// Skip exact/capitalized matches handled above to avoid re-work,
+			// but strings.EqualFold handles them anyway.
+			// Just check for case-insensitive match
+			if strings.EqualFold(f.Name, key) {
+				field = v.Field(i)
+				break
 			}
 		}
 	}
