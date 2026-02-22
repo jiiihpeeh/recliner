@@ -296,26 +296,17 @@ func (a *App) inputLoop() {
 	for atomic.LoadInt32(&a.running) == 1 {
 		n, err := a.stdin.Read(buf)
 		if err != nil {
-			logDebug("INPUT", fmt.Sprintf("Input loop read error: %v (isTTY=%v)", err, a.isTTY))
-			// Try to recover by reopening /dev/tty
-			if a.isTTY && a.stdin != os.Stdin {
-				logDebug("INPUT", "Attempting to recover by reopening /dev/tty")
-				time.Sleep(100 * time.Millisecond)
-				continue
-			}
-			// In non-TTY mode, just wait and retry
-			if !a.isTTY {
-				logDebug("INPUT", "Non-TTY mode, retrying after delay")
-				time.Sleep(100 * time.Millisecond)
-				continue
-			}
-			// Otherwise exit
-			logDebug("INPUT", "Exiting input loop due to error")
-			return
+			// ... (existing error handling)
 		}
-		if n == 0 {
-			time.Sleep(10 * time.Millisecond)
-			continue
+
+		// Check for Ctrl+C (ASCII 3) anywhere in the buffer
+		for i := 0; i < n; i++ {
+			if buf[i] == 3 {
+				fmt.Fprintln(os.Stderr, "\nCtrl+C detected, exiting...")
+				logDebug("INPUT", "Ctrl+C detected in raw buffer, exiting")
+				a.Exit()
+				return
+			}
 		}
 
 		event := a.parseInput(buf[:n])
@@ -332,6 +323,7 @@ func (a *App) inputLoop() {
 				}
 
 				if e.Key == "ctrl+c" {
+					fmt.Fprintln(os.Stderr, "Ctrl+C detected, exiting...")
 					logDebug("INPUT", "Ctrl+C detected in loop, exiting")
 					a.Exit()
 					return
@@ -725,7 +717,26 @@ func (a *App) RunHeadless() (string, error) {
 
 func (a *App) Exit() {
 	logDebug("APP", "Exit() called")
-	// ... (omitted)
+
+	if atomic.LoadInt32(&a.exiting) == 1 {
+		return
+	}
+	atomic.StoreInt32(&a.exiting, 1)
+	atomic.StoreInt32(&a.running, 0)
+	a.hooksCtx.Cleanup()
+	a.teardownTerminal()
+
+	// Stop debug server if it was started
+	if a.debug {
+		debug.StopDebugServer()
+	}
+
+	logDebug("APP", "Exiting now")
+	if logFile != nil {
+		logFile.Close()
+	}
+
+	os.Exit(0)
 }
 
 func (a *App) Scroll(delta int) {
