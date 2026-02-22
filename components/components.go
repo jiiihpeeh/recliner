@@ -130,7 +130,7 @@ func Box(props any) vdom.Node {
 				hc.UseFocusManager().Focus(id)
 			}
 		}
-		if oc, ok := util.GetProp[func(events.MouseEvent)](props, "onClick"); ok {
+		if oc, ok := util.GetProp[func(events.MouseEvent)](props, "onClick"); ok && oc != nil {
 			oc(e)
 		}
 	}
@@ -225,6 +225,7 @@ func Box(props any) vdom.Node {
 			Size        int
 			ThumbColor  string
 			TrackColor  string
+			Style       vdom.Style
 			OnClick     func(events.MouseEvent)
 		}{
 			Orientation: "vertical",
@@ -238,6 +239,7 @@ func Box(props any) vdom.Node {
 				return "white"
 			}(),
 			TrackColor: "gray",
+			Style:      vdom.Style{Width: 1, Height: barLength},
 			OnClick: func(me events.MouseEvent) {
 				if me.Button != events.MouseButtonLeft {
 					return
@@ -311,7 +313,7 @@ func Box(props any) vdom.Node {
 				return "white"
 			}(),
 			TrackColor: "gray",
-			Style:      vdom.Style{Height: 1},
+			Style:      vdom.Style{Width: barLength, Height: 1},
 			OnClick: func(me events.MouseEvent) {
 				if me.Button != events.MouseButtonLeft {
 					return

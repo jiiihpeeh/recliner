@@ -217,8 +217,10 @@ func Image(props any) vdom.Node {
 		targetH = uint(float64(targetW) * ratio * 0.5)
 	}
 
-	// We use half-block, so we need 2x vertical pixels
-	resized := resize.Resize(targetW, targetH*2, img, resize.Lanczos3)
+	resized := hooks.UseMemo(hc, func() image.Image {
+		// We use half-block, so we need 2x vertical pixels
+		return resize.Resize(targetW, targetH*2, img, resize.Lanczos3)
+	}, []any{img, targetW, targetH})
 
 	return &vdom.Element{
 		Type: "image",

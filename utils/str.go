@@ -302,9 +302,17 @@ func (s Str) Wrap(width int) []Str {
 		return []Str{s}
 	}
 
+	// Safety limit for wrapping to prevent hang on massive inputs
+	const maxRunes = 50000
+	runesToWrap := s.runes
+	if len(runesToWrap) > maxRunes {
+		runesToWrap = runesToWrap[:maxRunes]
+	}
+
 	var result []Str
 	var current []rune
 	currentWidth := 0
+	// ...
 
 	// Helper to add line to results ensuring NO slice sharing
 	flush := func() {

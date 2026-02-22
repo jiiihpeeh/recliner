@@ -168,7 +168,7 @@ func (a *App) Run() error {
 	}
 
 	go a.inputLoop()
-	logDebug("INPUT", "Input loop started")
+	logDebug("INPUT", "Input loop goroutine spawned")
 
 	go func() {
 		sigChan := make(chan os.Signal, 1)
@@ -258,7 +258,7 @@ func (a *App) setupTerminal() error {
 
 func (a *App) teardownTerminal() {
 	logDebug("APP", "teardownTerminal() called")
-	if a == nil || a.stdin == nil || a.oldState == nil {
+	if a == nil || a.stdin == nil {
 		logDebug("APP", "teardownTerminal: early return - nil check failed")
 		return
 	}
@@ -271,13 +271,19 @@ func (a *App) teardownTerminal() {
 		logDebug("APP", "teardownTerminal: not in alt screen")
 	}
 
-	logDebug("APP", "teardownTerminal: restoring terminal")
-	term.Restore(int(a.stdin.Fd()), a.oldState)
+	if a.oldState != nil {
+		logDebug("APP", "teardownTerminal: restoring terminal")
+		term.Restore(int(a.stdin.Fd()), a.oldState)
+	}
 	fmt.Print("\x1b[0m")
 	logDebug("APP", "teardownTerminal: complete")
 }
 
 func (a *App) inputLoop() {
+	logDebug("INPUT", "inputLoop thread started")
+	// Re-set context for input loop goroutine
+	hooks.SetContext(a.hooksCtx)
+
 	defer func() {
 		if r := recover(); r != nil {
 			logDebug("INPUT", fmt.Sprintf("Input loop panic: %v", r))
@@ -296,7 +302,19 @@ func (a *App) inputLoop() {
 	for atomic.LoadInt32(&a.running) == 1 {
 		n, err := a.stdin.Read(buf)
 		if err != nil {
-			// ... (existing error handling)
+			logDebug("INPUT", fmt.Sprintf("Input loop read error: %v (isTTY=%v)", err, a.isTTY))
+			if atomic.LoadInt32(&a.running) == 0 {
+				return
+			}
+			// In non-TTY mode, just wait and retry
+			if !a.isTTY {
+				time.Sleep(100 * time.Millisecond)
+				continue
+			}
+			// Otherwise exit
+			logDebug("INPUT", "Exiting input loop due to fatal error")
+			atomic.StoreInt32(&a.running, 0)
+			return
 		}
 
 		// Check for Ctrl+C (ASCII 3) anywhere in the buffer
@@ -329,7 +347,6 @@ func (a *App) inputLoop() {
 					return
 				}
 
-				logDebug("INPUT", fmt.Sprintf("Processing handlers for key: %s", e.Key))
 				handlers := a.hooksCtx.GetInputHandlers()
 				for _, h := range handlers {
 					func() {
@@ -350,64 +367,60 @@ func (a *App) inputLoop() {
 				adjustedEvent.ScreenX = e.X
 				adjustedEvent.ScreenY = e.Y
 
-				// Handle Capture
-				if a.mouseCapture != nil {
-					func() {
-						defer func() {
-							if r := recover(); r != nil {
-								logDebug("INPUT", fmt.Sprintf("MouseCapture panic: %v", r))
-								a.mouseCapture = nil
-							}
-						}()
-						a.mouseCapture(adjustedEvent)
+				func() {
+					defer func() {
+						if r := recover(); r != nil {
+							logDebug("INPUT", fmt.Sprintf("MouseEvent panic: %v", r))
+							a.mouseCapture = nil
+						}
 					}()
-					if e.Action == events.MouseActionRelease {
-						a.mouseCapture = nil
-					}
-					continue
-				}
 
-				// Standard Hit Test
-				switch e.Action {
-				case events.MouseActionScrollUp:
-					handler := a.renderer.HitTest(adjustedEvent)
-					if handler == nil {
-						a.Scroll(-3)
-					} else {
-						// Component might handle scroll
-						handler(adjustedEvent)
-					}
-				case events.MouseActionScrollDown:
-					handler := a.renderer.HitTest(adjustedEvent)
-					if handler == nil {
-						a.Scroll(3)
-					} else {
-						handler(adjustedEvent)
-					}
-				case events.MouseActionPress: // Only new presses trigger hit tests if not capturing
-					if e.Button == events.MouseButtonLeft {
-						// Default behavior: click anywhere blurs current focus.
-						// If the clicked element is focusable, its handler will call Focus()
-						// and restore it.
-						a.hooksCtx.UseFocusManager().Blur()
+					// Handle Capture
+					if a.mouseCapture != nil {
+						a.mouseCapture(adjustedEvent)
+						if e.Action == events.MouseActionRelease {
+							a.mouseCapture = nil
+						}
+						return
 					}
 
-					handler := a.renderer.HitTest(adjustedEvent)
-					if handler != nil {
-						a.mouseCapture = handler // Start capture
-						func() {
-							defer func() {
-								if r := recover(); r != nil {
-									logDebug("INPUT", fmt.Sprintf("MouseHandler panic: %v", r))
-									a.mouseCapture = nil
-								}
+					// Standard Hit Test
+					switch e.Action {
+					case events.MouseActionScrollUp:
+						handler := a.renderer.HitTest(adjustedEvent)
+						if handler == nil {
+							a.Scroll(-3)
+						} else {
+							func() {
+								defer func() { recover() }()
+								handler(adjustedEvent)
 							}()
+						}
+					case events.MouseActionScrollDown:
+						handler := a.renderer.HitTest(adjustedEvent)
+						if handler == nil {
+							a.Scroll(3)
+						} else {
+							func() {
+								defer func() { recover() }()
+								handler(adjustedEvent)
+							}()
+						}
+					case events.MouseActionPress: // Only new presses trigger hit tests if not capturing
+						handler := a.renderer.HitTest(adjustedEvent)
+
+						if e.Button == events.MouseButtonLeft {
+							a.hooksCtx.UseFocusManager().Blur()
+						}
+
+						if handler != nil {
+							a.mouseCapture = handler // Start capture
 							handler(adjustedEvent)
-						}()
+						}
+					case events.MouseActionMotion:
+						// Hover handling
 					}
-				case events.MouseActionMotion:
-					// Hover handling could go here
-				}
+				}()
 			}
 		}
 	}
@@ -488,6 +501,20 @@ func (a *App) parseInput(buf []byte) interface{} {
 			Key:    "ctrl+c",
 			Ctrl:   true,
 			Escape: false,
+		}
+	}
+
+	if buf[0] == 127 || buf[0] == 8 {
+		return &events.KeyPressEvent{
+			Key:    "backspace",
+			Escape: false,
+		}
+	}
+
+	if len(buf) >= 3 && buf[0] == '\x1b' && buf[1] == '[' && buf[2] == '3' && len(buf) >= 4 && buf[3] == '~' {
+		return &events.KeyPressEvent{
+			Key:    "delete",
+			Escape: true,
 		}
 	}
 
@@ -618,7 +645,8 @@ func (a *App) onUpdate() {
 	atomic.StoreInt32(&a.needsRender, 1)
 	logDebug("APP", "onUpdate called, triggering render")
 
-	// Try to render immediately if possible
+	// Try to render immediately if possible.
+	// render() uses TryLock so it's safe to call frequently.
 	go a.render()
 }
 
@@ -688,8 +716,8 @@ func (a *App) render() {
 			break
 		}
 
-		// Optional: prevent CPU pegging if something is constantly updating
-		// time.Sleep(1 * time.Millisecond)
+		// Prevent CPU pegging if something is constantly updating
+		time.Sleep(1 * time.Millisecond)
 	}
 }
 

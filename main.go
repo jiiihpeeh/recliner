@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/j-p/recliner/app"
@@ -84,11 +86,19 @@ func createApp(props any, debugMode bool) vdom.Node {
 	sysStats := UseSystemStats(hooksCtx)
 	inputVal, setInputVal := hooks.UseState[string](hooksCtx, "")
 	inputVal2, setInputVal2 := hooks.UseState[string](hooksCtx, "")
+	cmdInput, setCmdInput := hooks.UseState[string](hooksCtx, "ls -la")
+	cmdOutput, setCmdOutput := hooks.UseState[string](hooksCtx, "")
 	focusMgr := hooksCtx.UseFocusManager()
 	showMenu, setShowMenu := hooks.UseState[bool](hooksCtx, false)
 	menuX, setMenuX := hooks.UseState[int](hooksCtx, 0)
 	menuY, setMenuY := hooks.UseState[int](hooksCtx, 0)
 	refreshJoke, setRefreshJoke := hooks.UseState[bool](hooksCtx, false)
+	lastKeys, setLastKeys := hooks.UseState[[]string](hooksCtx, []string{})
+
+	// Pre-create inputs to ensure hook order stability even if they are not rendered
+	nameInput := c.Input(c.InputProps{ID: "input1", Value: inputVal, OnChange: func(s string) { setInputVal(s) }, Placeholder: "Enter name...", Width: 30})
+	emailInput := c.Input(c.InputProps{ID: "input2", Value: inputVal2, OnChange: func(s string) { setInputVal2(s) }, Placeholder: "Enter email...", Width: 30})
+	cmdInField := c.Input(c.InputProps{ID: "cmd-in", Value: cmdInput, OnChange: setCmdInput, Width: 20})
 
 	jokeRes := hooks.UseFetch[ChuckNorrisJoke](hooksCtx, fmt.Sprintf("https://api.chucknorris.io/jokes/random?t=%v", refreshJoke))
 	textBoxValue, _ := hooks.UseState[string](hooksCtx, "")
@@ -101,7 +111,16 @@ func createApp(props any, debugMode bool) vdom.Node {
 	}
 
 	hooksCtx.UseInput(func(key events.KeyPressEvent) {
+		app.DebugLog("GLOBAL_INPUT", "Key: "+key.Key)
 		focusMgr.HandleKey(key)
+
+		// Track last 5 keys for Hooks Context demo
+		newKeys := append([]string{key.Key}, lastKeys...)
+		if len(newKeys) > 5 {
+			newKeys = newKeys[:5]
+		}
+		setLastKeys(newKeys)
+
 		switch key.Key {
 		case "up":
 			setCount(count + 1)
@@ -116,7 +135,7 @@ func createApp(props any, debugMode bool) vdom.Node {
 		case "r":
 			setRandomMode(!randomMode)
 		}
-	}, []any{count, randomMode, fibIndex})
+	}, []any{count, randomMode, fibIndex, lastKeys})
 
 	return c.Box(c.BoxProps{
 		BorderStyle: c.BorderStyleRound,
@@ -138,7 +157,7 @@ func createApp(props any, debugMode bool) vdom.Node {
 	},
 		c.Box(c.BoxProps{
 			BorderStyle: c.BorderStyleNone,
-			Style:       c.StyleProps{Position: c.PositionFixed, Top: 0, Left: 0, Width: rootWidth, Display: c.DisplayFlex, FlexDirection: c.FlexDirectionRow, JustifyContent: c.JustifyContentSpaceBetween, Background: "blue", ZIndex: 100},
+			Style:       c.StyleProps{Position: c.PositionFixed, Top: 0, Left: 0, Width: rootWidth, Display: c.DisplayFlex, FlexDirection: c.FlexDirectionRow, JustifyContent: c.JustifyContentSpaceBetween, Background: "blue"},
 		},
 			c.Text(c.TextProps{Content: " RECLINER DASHBOARD ", Style: c.TextStyle().Bold().Color("white")}),
 			c.Text(c.TextProps{Content: time.Now().Format(" 15:04:05 "), Style: c.TextStyle().Color("whiteBright")}),
@@ -254,10 +273,76 @@ func createApp(props any, debugMode bool) vdom.Node {
 					{
 						ID: "tab-inputs", Title: "Form Inputs",
 						Content: c.Box(c.BoxProps{BorderStyle: c.BorderStyleNone, Style: c.StyleProps{Display: c.DisplayFlex, FlexDirection: c.FlexDirectionColumn, Gap: 1}},
+							c.Text(c.TextProps{Content: "Command Input (Testing):"}),
+							cmdInField,
+							c.Spacer(1),
 							c.Text(c.TextProps{Content: "Name:"}),
-							c.Input(c.InputProps{ID: "input1", Value: inputVal, OnChange: func(s string) { setInputVal(s) }, Placeholder: "Enter name...", Width: 30}),
+							nameInput,
 							c.Text(c.TextProps{Content: "Email:"}),
-							c.Input(c.InputProps{ID: "input2", Value: inputVal2, OnChange: func(s string) { setInputVal2(s) }, Placeholder: "Enter email...", Width: 30}),
+							emailInput,
+						),
+					},
+					{
+						ID: "tab-hooks", Title: "Hooks Context",
+						Content: c.Box(c.BoxProps{BorderStyle: c.BorderStyleNone, Style: c.StyleProps{Display: c.DisplayFlex, FlexDirection: c.FlexDirectionColumn, Gap: 1}},
+							c.Text(c.TextProps{Content: "Standard Handle File Descriptors:", Style: c.TextStyle().Bold().Color("cyan")}),
+							c.Text(c.TextProps{Content: fmt.Sprintf("• Stdin:  %d (present: %v)", hooksCtx.Stdin.Fd(), hooksCtx.Stdin != nil)}),
+							c.Text(c.TextProps{Content: fmt.Sprintf("• Stdout: %d (present: %v)", hooksCtx.Stdout.Fd(), hooksCtx.Stdout != nil)}),
+							c.Text(c.TextProps{Content: fmt.Sprintf("• Stderr: %d (present: %v)", hooksCtx.Stderr.Fd(), hooksCtx.Stderr != nil)}),
+							c.Spacer(1),
+							c.Text(c.TextProps{Content: "Terminal Info:", Style: c.TextStyle().Bold().Color("cyan")}),
+							c.Text(c.TextProps{Content: fmt.Sprintf("• Dimensions: %d x %d", hooksCtx.WindowWidth, hooksCtx.WindowHeight)}),
+							c.Text(c.TextProps{Content: fmt.Sprintf("• App present: %v", hooksCtx.App != nil)}),
+							c.Spacer(1),
+							c.Text(c.TextProps{Content: "Keystroke Test (Stdin):", Style: c.TextStyle().Bold().Color("cyan")}),
+							c.Text(c.TextProps{Content: fmt.Sprintf("• Last 5 Keys: %v", strings.Join(lastKeys, ", "))}),
+							c.Spacer(1),
+							c.Button(c.ButtonProps{
+								Label: "Log to Stderr",
+								OnClick: func(e events.MouseEvent) {
+									if e.Action == events.MouseActionPress {
+										fmt.Fprintln(hooksCtx.Stderr, "Manual log from hooks context to stderr at "+time.Now().Format("15:04:05"))
+										app.DebugLog("HOOKS_DEMO", "Wrote to Stderr")
+									}
+								},
+							}),
+						),
+					},
+					{
+						ID: "tab-terminal", Title: "Terminal Capture",
+						Content: c.Box(c.BoxProps{BorderStyle: c.BorderStyleNone, Style: c.StyleProps{Display: c.DisplayFlex, FlexDirection: c.FlexDirectionColumn, Gap: 1}},
+							c.Text(c.TextProps{Content: "Subprocess Output Capture:", Style: c.TextStyle().Bold().Color("yellow")}),
+							c.Box(c.BoxProps{BorderStyle: c.BorderStyleNone, Style: c.StyleProps{Display: c.DisplayFlex, FlexDirection: c.FlexDirectionRow, Gap: 1, AlignItems: c.AlignItemsCenter}},
+								c.Text(c.TextProps{Content: "Cmd:"}),
+								cmdInField,
+								c.Button(c.ButtonProps{
+									Label: "Run",
+									OnClick: func(e events.MouseEvent) {
+										if e.Action == events.MouseActionPress {
+											setCmdOutput("Running...")
+											go func() {
+												args := strings.Split(cmdInput, " ")
+												cmd := exec.Command(args[0], args[1:]...)
+												out, err := cmd.CombinedOutput()
+												outputStr := string(out)
+												if len(outputStr) > 10000 {
+													outputStr = outputStr[:10000] + "\n... (truncated)"
+												}
+												if err != nil {
+													setCmdOutput(fmt.Sprintf("Error: %v\n%s", err, outputStr))
+												} else {
+													setCmdOutput(outputStr)
+												}
+											}()
+										}
+									},
+								}),
+							),
+							c.Spacer(1),
+							c.TextBox(c.TextBoxProps{
+								ID: "cmd-out", Value: cmdOutput, Width: innerRootWidth - 6, Height: 10,
+								ReadOnly: true, Scrollable: true,
+							}),
 						),
 					},
 				},

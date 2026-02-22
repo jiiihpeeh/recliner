@@ -5,7 +5,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/j-p/recliner/app"
 	"github.com/j-p/recliner/events"
 	"github.com/j-p/recliner/hooks"
 	"github.com/j-p/recliner/util"
@@ -46,7 +45,14 @@ func Input(props any) vdom.Node {
 		inputType = "text"
 	}
 
+	initialized, setInitialized := hooks.UseState[bool](hc, false)
 	cursorPos, setCursorPos := hooks.UseState[int](hc, 0)
+
+	if !initialized && value != "" {
+		// app.DebugLog("INPUT_INIT", fmt.Sprintf("ID: %s, Value: %s, Length: %d", id, value, utf8.RuneCountInString(value)))
+		setCursorPos(utf8.RuneCountInString(value))
+		setInitialized(true)
+	}
 	dragStart, setDragStart := hooks.UseState[int](hc, -1)
 	isDragging, setIsDragging := hooks.UseState[bool](hc, false)
 	showCursor, setShowCursor := hooks.UseState[bool](hc, true)
@@ -135,14 +141,15 @@ func Input(props any) vdom.Node {
 
 	handleMouse := func(e events.MouseEvent) {
 		s := stateRef.Value
-		if onClick, ok := util.GetProp[func(events.MouseEvent)](props, "onClick"); ok {
-			onClick(e)
-		}
 		if e.Action == events.MouseActionPress {
-			app.DebugLog("INPUT", "Click focusing: "+id)
 			// Ensure we are using the manager to avoid any component-local state issues
 			hc.UseFocusManager().Focus(id)
 		}
+
+		if onClick, ok := util.GetProp[func(events.MouseEvent)](props, "onClick"); ok && onClick != nil {
+			onClick(e)
+		}
+
 		if showPlaceholder {
 
 			if e.Action == events.MouseActionPress {
@@ -283,7 +290,7 @@ func Input(props any) vdom.Node {
 				}
 			}
 			return
-		case "\x7f", "\b", "ctrl+h":
+		case "backspace", "\x7f", "\b", "ctrl+h":
 			s, e := getSelection()
 			if s != -1 {
 				deleteRange(s, e)

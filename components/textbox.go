@@ -108,28 +108,31 @@ func TextBox(props any) vdom.Node {
 		currentTextWidth = 1
 	}
 
-	var visualLines []visualLine
-	for i, pl := range physicalLines {
-		ps := utils.NewStr(pl)
-		if ps.Length() == 0 {
-			visualLines = append(visualLines, visualLine{
-				physicalLineIdx: i,
-				startRuneIdx:    0,
-				content:         "",
-			})
-			continue
+	visualLines := hooks.UseMemo(hc, func() []visualLine {
+		var lines []visualLine
+		for i, pl := range physicalLines {
+			ps := utils.NewStr(pl)
+			if ps.Length() == 0 {
+				lines = append(lines, visualLine{
+					physicalLineIdx: i,
+					startRuneIdx:    0,
+					content:         "",
+				})
+				continue
+			}
+			wrapped := ps.Wrap(currentTextWidth)
+			startIdx := 0
+			for _, wl := range wrapped {
+				lines = append(lines, visualLine{
+					physicalLineIdx: i,
+					startRuneIdx:    startIdx,
+					content:         wl.Value(),
+				})
+				startIdx += wl.Length()
+			}
 		}
-		wrapped := ps.Wrap(currentTextWidth)
-		startIdx := 0
-		for _, wl := range wrapped {
-			visualLines = append(visualLines, visualLine{
-				physicalLineIdx: i,
-				startRuneIdx:    startIdx,
-				content:         wl.Value(),
-			})
-			startIdx += wl.Length()
-		}
-	}
+		return lines
+	}, []any{value, currentTextWidth})
 
 	stateRef := hooks.UseRef(hc, &textBoxInternalState{})
 	stateRef.Value.value = value
@@ -599,6 +602,7 @@ func TextBox(props any) vdom.Node {
 			Size        int
 			ThumbColor  string
 			TrackColor  string
+			Style       vdom.Style
 			OnClick     func(events.MouseEvent)
 		}{
 			Orientation: "vertical",
@@ -612,6 +616,7 @@ func TextBox(props any) vdom.Node {
 				return "white"
 			}(),
 			TrackColor: "gray",
+			Style:      vdom.Style{Width: 1, Height: height},
 			OnClick: func(me events.MouseEvent) {
 				if me.Button != events.MouseButtonLeft {
 					return

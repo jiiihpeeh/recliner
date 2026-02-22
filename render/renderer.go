@@ -557,10 +557,12 @@ func (ctx *RenderContext) layoutNode(node vdom.Node, x, y int) {
 
 	switch n := node.(type) {
 	case *vdom.Element:
+		// Register hit area BEFORE children so children get priority in HitTest (last added is checked first)
 		if handler, ok := util.GetProp[func(events.MouseEvent)](n.Props, "onClick"); ok && handler != nil {
 			isFixed := n.Style.Position == "fixed"
 			ctx.hitAreas = append(ctx.hitAreas, HitArea{x, x + l.Width, y, y + l.Height, isFixed, handler})
 		}
+
 		p, _ := util.GetProp[int](n.Props, "padding")
 		bs := util.Ternary(util.GetPropString(n.Props, "borderStyle") == "none", 0, 1)
 		st, _ := util.GetProp[int](n.Props, "scrollTop")
@@ -828,7 +830,7 @@ func (ctx *RenderContext) drawImage(el *vdom.Element, layout Layout, buf *Buffer
 	b := img.Bounds()
 	w, h := b.Dx(), b.Dy()
 	for y := 0; y < h/2; y++ {
-		for x := range w {
+		for x := 0; x < w; x++ {
 			wx, wy := layout.X+x, layout.Y+y
 			if wx < clip.X || wx >= clip.X+clip.Width || wy < clip.Y || wy >= clip.Y+clip.Height {
 				continue
