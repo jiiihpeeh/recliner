@@ -31,7 +31,7 @@ ReCLIner comes with a variety of built-in components:
 ### Installation
 
 ```bash
-go get github.com/j-p/recliner
+go get github.com/jiiihpeeh/recliner
 ```
 
 ### Basic Example
@@ -40,10 +40,10 @@ go get github.com/j-p/recliner
 package main
 
 import (
-	"github.com/j-p/recliner/app"
-	"github.com/j-p/recliner/c"
-	"github.com/j-p/recliner/hooks"
-	"github.com/j-p/recliner/vdom"
+	"github.com/jiiihpeeh/recliner/app"
+	"github.com/jiiihpeeh/recliner/c"
+	"github.com/jiiihpeeh/recliner/hooks"
+	"github.com/jiiihpeeh/recliner/vdom"
 )
 
 func main() {
