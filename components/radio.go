@@ -79,7 +79,7 @@ func RadioGroup(props any) vdom.Node {
 		// Render radio button
 		symbol := "○" // Unicode unselected radio
 		if isChecked {
-			symbol = "●" // Unicode selected radio
+			symbol = "◉" // Unicode selected radio (fisheye/nested circle)
 		}
 
 		if focused {

@@ -107,7 +107,7 @@ func Tabs(props any) vdom.Node {
 		if variant == "unicode" {
 			label = " " + item.Title + " "
 			if isActive {
-				label = "● " + item.Title + " "
+				label = "◉ " + item.Title + " "
 			} else {
 				label = "○ " + item.Title + " "
 			}
