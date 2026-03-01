@@ -50,6 +50,7 @@ func Tabs(props any) vdom.Node {
 	}
 
 	id, _ := util.GetProp[string](props, "id")
+	variant, _ := util.GetProp[string](props, "variant")
 
 	defaultActive, ok := util.GetProp[string](props, "defaultActive")
 	if !ok && len(items) > 0 {
@@ -98,14 +99,37 @@ func Tabs(props any) vdom.Node {
 			}, []any{itemID})
 		}
 
+		// Style the headers based on variant
+		label := "[" + item.Title + "]"
+		borderStyle := "none"
+		padding := 0
+
+		if variant == "unicode" {
+			label = " " + item.Title + " "
+			if isActive {
+				label = "● " + item.Title + " "
+			} else {
+				label = "○ " + item.Title + " "
+			}
+		} else if variant == "box" {
+			label = item.Title
+			borderStyle = "single"
+			if isActive {
+				borderStyle = "bold"
+			}
+			padding = 0
+		}
+
 		headerNodes = append(headerNodes, &vdom.Element{
 			Type: "box",
 			Props: struct {
 				BorderStyle string
+				Padding     int
 				Style       vdom.Style
 				OnClick     func(events.MouseEvent)
 			}{
-				BorderStyle: "none",
+				BorderStyle: borderStyle,
+				Padding:     padding,
 				Style:       headerStyle,
 				OnClick: func(e events.MouseEvent) {
 					if e.Action == events.MouseActionPress {
@@ -120,7 +144,7 @@ func Tabs(props any) vdom.Node {
 				&vdom.Element{
 					Type:      "text",
 					Props:     struct{ Style vdom.Style }{Style: headerStyle},
-					InnerText: "[" + item.Title + "]",
+					InnerText: label,
 					Style:     headerStyle,
 				},
 			},

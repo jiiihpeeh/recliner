@@ -3,6 +3,7 @@ package c
 import (
 	"github.com/j-p/recliner/components"
 	"github.com/j-p/recliner/events"
+	"github.com/j-p/recliner/utils"
 	"github.com/j-p/recliner/vdom"
 )
 
@@ -109,20 +110,42 @@ type RadialGradient struct {
 }
 
 type StyleProps struct {
-	Display            DisplayStyle
-	FlexDirection      FlexDirection
-	Gap                interface{}
-	Width, Height      interface{}
-	Background         string
-	AlignItems         AlignItems
-	AlignSelf          AlignSelf
-	FlexGrow           int
-	Position           Position
-	Top, Left          interface{}
-	JustifyContent     JustifyContent
-	ZIndex             int
-	ForegroundGradient *LinearGradient
-	BorderGradient     *RadialGradient
+	Display              DisplayStyle
+	FlexDirection        FlexDirection
+	Gap                  interface{}
+	ColumnGap            interface{}
+	RowGap               interface{}
+	Margin               interface{}
+	MarginX              interface{}
+	MarginY              interface{}
+	MarginTop            interface{}
+	MarginBottom         interface{}
+	MarginLeft           interface{}
+	MarginRight          interface{}
+	BorderTopColor       string
+	BorderBottomColor    string
+	BorderLeftColor      string
+	BorderRightColor     string
+	BorderDimColor       bool
+	BorderTopDimColor    bool
+	BorderBottomDimColor bool
+	BorderLeftDimColor   bool
+	BorderRightDimColor  bool
+	BorderTop            *bool
+	BorderBottom         *bool
+	BorderLeft           *bool
+	BorderRight          *bool
+	Width, Height        interface{}
+	Background           string
+	AlignItems           AlignItems
+	AlignSelf            AlignSelf
+	FlexGrow             int
+	Position             Position
+	Top, Left            interface{}
+	JustifyContent       JustifyContent
+	ZIndex               int
+	ForegroundGradient   *LinearGradient
+	BorderGradient       *RadialGradient
 }
 
 func (p StyleProps) ToStyle() vdom.Style {
@@ -135,6 +158,62 @@ func (p StyleProps) ToStyle() vdom.Style {
 	}
 	if v, ok := p.Gap.(int); ok {
 		s.Gap = v
+	}
+	if v, ok := p.ColumnGap.(int); ok {
+		s.ColumnGap = v
+	}
+	if v, ok := p.RowGap.(int); ok {
+		s.RowGap = v
+	}
+	if v, ok := p.Margin.(int); ok {
+		s.MarginTop = v
+		s.MarginBottom = v
+		s.MarginLeft = v
+		s.MarginRight = v
+	}
+	if v, ok := p.MarginX.(int); ok {
+		s.MarginLeft = v
+		s.MarginRight = v
+	}
+	if v, ok := p.MarginY.(int); ok {
+		s.MarginTop = v
+		s.MarginBottom = v
+	}
+	if v, ok := p.MarginTop.(int); ok {
+		s.MarginTop = v
+	}
+	if v, ok := p.MarginBottom.(int); ok {
+		s.MarginBottom = v
+	}
+	if v, ok := p.MarginLeft.(int); ok {
+		s.MarginLeft = v
+	}
+	if v, ok := p.MarginRight.(int); ok {
+		s.MarginRight = v
+	}
+	s.BorderTopColor = p.BorderTopColor
+	s.BorderBottomColor = p.BorderBottomColor
+	s.BorderLeftColor = p.BorderLeftColor
+	s.BorderRightColor = p.BorderRightColor
+	s.BorderTopDim = p.BorderTopDimColor || p.BorderDimColor
+	s.BorderBottomDim = p.BorderBottomDimColor || p.BorderDimColor
+	s.BorderLeftDim = p.BorderLeftDimColor || p.BorderDimColor
+	s.BorderRightDim = p.BorderRightDimColor || p.BorderDimColor
+	s.BorderTop = true
+	if p.BorderTop != nil {
+		s.BorderTop = *p.BorderTop
+	}
+	s.BorderBottom = true
+	if p.BorderBottom != nil {
+		s.BorderBottom = *p.BorderBottom
+	}
+	s.BorderLeft = true
+	if p.BorderLeft != nil {
+		s.BorderLeft = *p.BorderLeft
+	}
+	s.BorderRight = true
+	if p.BorderRight != nil {
+		s.BorderRight = *p.BorderRight
 	}
 	if v, ok := p.Width.(int); ok {
 		s.Width = v
@@ -313,6 +392,13 @@ type ScrollBarProps struct {
 	OnClick                func(events.MouseEvent)
 }
 
+type AccordionVariant string
+
+const (
+	AccordionVariantClassic AccordionVariant = "classic"
+	AccordionVariantUnicode AccordionVariant = "unicode"
+)
+
 type AccordionItem struct {
 	Title   string
 	Content vdom.Node
@@ -322,8 +408,17 @@ type AccordionProps struct {
 	Items           []AccordionItem
 	AllowMultiple   bool
 	DefaultExpanded []string
+	Variant         AccordionVariant
 	ID              string
 }
+
+type TabsVariant string
+
+const (
+	TabsVariantClassic TabsVariant = "classic"
+	TabsVariantUnicode TabsVariant = "unicode"
+	TabsVariantBox     TabsVariant = "box"
+)
 
 type TabItem struct {
 	Title   string
@@ -334,6 +429,7 @@ type TabsProps struct {
 	Items                    []TabItem
 	DefaultActive, ActiveTab string
 	OnChange                 func(string)
+	Variant                  TabsVariant
 	ID                       string
 }
 
@@ -395,6 +491,38 @@ func Text(p TextProps) vdom.Node {
 	}
 
 	return vdom.CreateElement("text", res, p.Content)
+}
+
+type LinkProps struct {
+	Href        string
+	Command     string
+	Padding     int
+	BorderStyle BorderStyle
+	BorderColor string
+	Style       StyleProps
+	OnClick     func(events.MouseEvent)
+	ID          string
+}
+
+func Link(p LinkProps, c ...vdom.Node) vdom.Node {
+	onClick := func(e events.MouseEvent) {
+		if p.Href != "" {
+			utils.Open(p.Href)
+		} else if p.Command != "" {
+			utils.RunCommand(p.Command)
+		}
+		if p.OnClick != nil {
+			p.OnClick(e)
+		}
+	}
+
+	return Box(BoxProps{
+		BorderStyle: p.BorderStyle,
+		BorderColor: p.BorderColor,
+		Padding:     p.Padding,
+		Style:       p.Style,
+		OnClick:     onClick,
+	}, c...)
 }
 
 func Button(p ButtonProps) vdom.Node           { return components.Button(p) }

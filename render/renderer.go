@@ -444,10 +444,11 @@ func (ctx *RenderContext) measureBox(n *vdom.Element, maxWidth int) Layout {
 
 	var cl Layout
 	flexDir := util.Ternary(n.Style.FlexDirection == "", "row", n.Style.FlexDirection)
-	gap := n.Style.Gap
+	columnGap := n.Style.ColumnGap
+	rowGap := n.Style.RowGap
 
 	if n.Style.Display == "flex" {
-		cl = ctx.measureFlex(n, innerMaxWidth, flexDir, gap)
+		cl = ctx.measureFlex(n, innerMaxWidth, flexDir, columnGap, rowGap)
 	} else {
 		for i, child := range n.Children {
 			childLayout := ctx.measureNode(child, innerMaxWidth)
@@ -455,31 +456,37 @@ func (ctx *RenderContext) measureBox(n *vdom.Element, maxWidth int) Layout {
 				continue
 			}
 			if i > 0 {
-				cl.Height += gap
+				cl.Height += rowGap
 			}
 			cl.Width = util.Max(cl.Width, childLayout.Width)
 			cl.Height += childLayout.Height
 		}
 	}
 
-	if n.Type == "box" {
+	if n.Style.Width != 0 {
+		cl.Width = n.Style.Width
+	} else if n.Type == "box" {
 		cl.Width += (p * 2) + (bs * 2)
+	}
+
+	if n.Style.Height != 0 {
+		cl.Height = n.Style.Height
+	} else if n.Type == "box" {
 		cl.Height += (p * 2) + (bs * 2)
 	}
 
-	if n.Style.Width != 0 {
-		cl.Width = n.Style.Width
-	}
-	if n.Style.Height != 0 {
-		cl.Height = n.Style.Height
+	if n.Type == "box" {
+		cl.Width += n.Style.MarginLeft + n.Style.MarginRight
+		cl.Height += n.Style.MarginTop + n.Style.MarginBottom
 	}
 
 	return cl
 }
 
-func (ctx *RenderContext) measureFlex(n *vdom.Element, maxWidth int, dir string, gap int) Layout {
+func (ctx *RenderContext) measureFlex(n *vdom.Element, maxWidth int, dir string, columnGap, rowGap int) Layout {
 	var cl Layout
 	first := true
+	gap := util.Ternary(dir == "row", columnGap, rowGap)
 	totalGrow, totalShrink, totalBasis := 0, 0, 0
 	type flexItem struct {
 		node                vdom.Node
@@ -560,7 +567,14 @@ func (ctx *RenderContext) layoutNode(node vdom.Node, x, y int) {
 		// Register hit area BEFORE children so children get priority in HitTest (last added is checked first)
 		if handler, ok := util.GetProp[func(events.MouseEvent)](n.Props, "onClick"); ok && handler != nil {
 			isFixed := n.Style.Position == "fixed"
-			ctx.hitAreas = append(ctx.hitAreas, HitArea{x, x + l.Width, y, y + l.Height, isFixed, handler})
+			ctx.hitAreas = append(ctx.hitAreas, HitArea{
+				x + n.Style.MarginLeft,
+				x + l.Width - n.Style.MarginRight,
+				y + n.Style.MarginTop,
+				y + l.Height - n.Style.MarginBottom,
+				isFixed,
+				handler,
+			})
 		}
 
 		p, _ := util.GetProp[int](n.Props, "padding")
@@ -568,17 +582,18 @@ func (ctx *RenderContext) layoutNode(node vdom.Node, x, y int) {
 		st, _ := util.GetProp[int](n.Props, "scrollTop")
 		sl, _ := util.GetProp[int](n.Props, "scrollLeft")
 
-		cx, cy := x+bs+p-sl, y+bs+p-st
+		cx, cy := x+bs+p-sl+n.Style.MarginLeft, y+bs+p-st+n.Style.MarginTop
 		curX, curY := cx, cy
 
 		dir := "column"
 		if n.Style.Display == "flex" {
 			dir = util.Ternary(n.Style.FlexDirection == "", "row", n.Style.FlexDirection)
 		}
-		gap := n.Style.Gap
+		columnGap := n.Style.ColumnGap
+		rowGap := n.Style.RowGap
 
 		if n.Style.Display == "flex" {
-			curX, curY = ctx.applyJustification(n, l, bs, p, cx, cy, dir, gap)
+			curX, curY = ctx.applyJustification(n, l, bs, p, cx, cy, dir, columnGap, rowGap)
 		}
 
 		for _, child := range n.Children {
@@ -598,9 +613,9 @@ func (ctx *RenderContext) layoutNode(node vdom.Node, x, y int) {
 			}
 			ctx.layoutNode(child, tx, ty)
 			if dir == "row" {
-				curX += childLayout.Width + gap
+				curX += childLayout.Width + columnGap
 			} else {
-				curY += childLayout.Height + gap
+				curY += childLayout.Height + rowGap
 			}
 		}
 	case *vdom.Fragment:
@@ -613,8 +628,9 @@ func (ctx *RenderContext) layoutNode(node vdom.Node, x, y int) {
 	}
 }
 
-func (ctx *RenderContext) applyJustification(n *vdom.Element, l Layout, bs, p int, cx, cy int, dir string, gap int) (int, int) {
+func (ctx *RenderContext) applyJustification(n *vdom.Element, l Layout, bs, p int, cx, cy int, dir string, columnGap, rowGap int) (int, int) {
 	tcw, tch, num := 0, 0, 0
+	gap := util.Ternary(dir == "row", columnGap, rowGap)
 	for _, child := range n.Children {
 		if isAbsolute(child) {
 			continue
@@ -634,7 +650,8 @@ func (ctx *RenderContext) applyJustification(n *vdom.Element, l Layout, bs, p in
 		num++
 	}
 	curX, curY := cx, cy
-	contentW, contentH := l.Width-bs*2-p*2, l.Height-bs*2-p*2
+	contentW := l.Width - bs*2 - p*2 - n.Style.MarginLeft - n.Style.MarginRight
+	contentH := l.Height - bs*2 - p*2 - n.Style.MarginTop - n.Style.MarginBottom
 	if dir == "row" {
 		switch n.Style.JustifyContent {
 		case "center":
@@ -675,19 +692,21 @@ func (ctx *RenderContext) applyJustification(n *vdom.Element, l Layout, bs, p in
 
 func (ctx *RenderContext) applyAlignment(n *vdom.Element, cl Layout, cs vdom.Style, cx, cy int, tx, ty int, dir string, bs, p int, l Layout) (int, int) {
 	align := util.Ternary(cs.AlignSelf != "" && cs.AlignSelf != "auto", cs.AlignSelf, n.Style.AlignItems)
+	contentW := l.Width - bs*2 - p*2 - n.Style.MarginLeft - n.Style.MarginRight
+	contentH := l.Height - bs*2 - p*2 - n.Style.MarginTop - n.Style.MarginBottom
 	if dir == "row" {
 		switch align {
 		case "center":
-			ty = cy + (l.Height-bs*2-p*2-cl.Height)/2
+			ty = cy + (contentH-cl.Height)/2
 		case "flex-end":
-			ty = cy + (l.Height - bs*2 - p*2 - cl.Height)
+			ty = cy + (contentH - cl.Height)
 		}
 	} else {
 		switch align {
 		case "center":
-			tx = cx + (l.Width-bs*2-p*2-cl.Width)/2
+			tx = cx + (contentW-cl.Width)/2
 		case "flex-end":
-			tx = cx + (l.Width - bs*2 - p*2 - cl.Width)
+			tx = cx + (contentW - cl.Width)
 		}
 	}
 	return tx, ty
@@ -721,7 +740,12 @@ func (ctx *RenderContext) collectDrawTasks(node vdom.Node, clip Layout, inherite
 		}
 
 		if n.Type == "text" || n.Type == "image" || n.Type == "box" {
-			ctx.tasks = append(ctx.tasks, drawTask{n, drawLayout, clip, inheritedBG, localZ, order})
+			boxLayout := drawLayout
+			boxLayout.X += n.Style.MarginLeft
+			boxLayout.Y += n.Style.MarginTop
+			boxLayout.Width -= n.Style.MarginLeft + n.Style.MarginRight
+			boxLayout.Height -= n.Style.MarginTop + n.Style.MarginBottom
+			ctx.tasks = append(ctx.tasks, drawTask{n, boxLayout, clip, inheritedBG, localZ, order})
 		}
 
 		childClip := clip
@@ -730,7 +754,7 @@ func (ctx *RenderContext) collectDrawTasks(node vdom.Node, clip Layout, inherite
 			bs := util.Ternary(util.GetPropString(n.Props, "borderStyle") == "none", 0, 1)
 			// Intersection needs to be in screen space if clip is in screen space
 			// layout is in canvas space. drawLayout is in screen space.
-			cr := Layout{drawLayout.X + bs + p, drawLayout.Y + bs + p, layout.Width - (bs * 2) - (p * 2), layout.Height - (bs * 2) - (p * 2)}
+			cr := Layout{drawLayout.X + bs + p + n.Style.MarginLeft, drawLayout.Y + bs + p + n.Style.MarginTop, layout.Width - (bs * 2) - (p * 2) - n.Style.MarginLeft - n.Style.MarginRight, layout.Height - (bs * 2) - (p * 2) - n.Style.MarginTop - n.Style.MarginBottom}
 			childClip, _ = intersect(cr, clip)
 		}
 
@@ -857,12 +881,24 @@ func (ctx *RenderContext) drawBox(el *vdom.Element, layout Layout, buf *Buffer, 
 
 	if bs != "none" {
 		for i := 0; i < w; i++ {
-			ctx.drawBorderCell(x+i, y, getBorderChar(bs, "top", i, w), el, layout, buf, clip, bc, inheritedBG)
-			ctx.drawBorderCell(x+i, y+h-1, getBorderChar(bs, "bottom", i, w), el, layout, buf, clip, bc, inheritedBG)
+			if style.BorderTop {
+				color := util.Ternary(style.BorderTopColor != "", style.BorderTopColor, bc)
+				ctx.drawBorderCell(x+i, y, getBorderChar(bs, "top", i, w), el, layout, buf, clip, color, inheritedBG, style.BorderTopDim)
+			}
+			if style.BorderBottom {
+				color := util.Ternary(style.BorderBottomColor != "", style.BorderBottomColor, bc)
+				ctx.drawBorderCell(x+i, y+h-1, getBorderChar(bs, "bottom", i, w), el, layout, buf, clip, color, inheritedBG, style.BorderBottomDim)
+			}
 		}
 		for i := 1; i < h-1; i++ {
-			ctx.drawBorderCell(x, y+i, getBorderChar(bs, "left", i, h), el, layout, buf, clip, bc, inheritedBG)
-			ctx.drawBorderCell(x+w-1, y+i, getBorderChar(bs, "right", i, h), el, layout, buf, clip, bc, inheritedBG)
+			if style.BorderLeft {
+				color := util.Ternary(style.BorderLeftColor != "", style.BorderLeftColor, bc)
+				ctx.drawBorderCell(x, y+i, getBorderChar(bs, "left", i, h), el, layout, buf, clip, color, inheritedBG, style.BorderLeftDim)
+			}
+			if style.BorderRight {
+				color := util.Ternary(style.BorderRightColor != "", style.BorderRightColor, bc)
+				ctx.drawBorderCell(x+w-1, y+i, getBorderChar(bs, "right", i, h), el, layout, buf, clip, color, inheritedBG, style.BorderRightDim)
+			}
 		}
 	}
 
@@ -884,12 +920,13 @@ func (ctx *RenderContext) drawBox(el *vdom.Element, layout Layout, buf *Buffer, 
 	}
 }
 
-func (ctx *RenderContext) drawBorderCell(x, y int, char rune, el *vdom.Element, layout Layout, buf *Buffer, clip Layout, color, bg string) {
+func (ctx *RenderContext) drawBorderCell(x, y int, char rune, el *vdom.Element, layout Layout, buf *Buffer, clip Layout, color, bg string, dim bool) {
 	if x < clip.X || x >= clip.X+clip.Width || y < clip.Y || y >= clip.Y+clip.Height {
 		return
 	}
 	s := el.Style
 	s.Foreground, s.Background = color, bg
+	s.Dim = dim
 	if g := s.BorderGradient; g != nil {
 		from, to := util.HexToRGB(g.From), util.HexToRGB(g.To)
 		cx, cy := float64(layout.X)+float64(layout.Width)*g.CenterX, float64(layout.Y)+float64(layout.Height)*g.CenterY

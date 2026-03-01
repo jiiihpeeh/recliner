@@ -225,7 +225,9 @@ func createApp(props any, debugMode bool) vdom.Node {
 			c.Tabs(c.TabsProps{
 				ID:            "main-tabs",
 				DefaultActive: "tab-joke",
+				Variant:       c.TabsVariantUnicode,
 				Items: []c.TabItem{
+
 					{
 						ID: "tab-joke", Title: "Daily Joke",
 						Content: c.Box(c.BoxProps{BorderStyle: c.BorderStyleNone, Style: c.StyleProps{Display: c.DisplayFlex, FlexDirection: c.FlexDirectionColumn, Gap: 1}},
@@ -350,7 +352,8 @@ func createApp(props any, debugMode bool) vdom.Node {
 		),
 		c.Spacer(1),
 		c.Accordion(c.AccordionProps{
-			ID: "info-accordion",
+			ID:      "info-accordion",
+			Variant: c.AccordionVariantUnicode,
 			Items: []c.AccordionItem{
 				{
 					ID:    "shortcuts",
@@ -364,7 +367,13 @@ func createApp(props any, debugMode bool) vdom.Node {
 					ID:    "about",
 					Title: "About",
 					Content: c.Box(c.BoxProps{BorderStyle: c.BorderStyleNone},
-						c.Text(c.TextProps{Content: "ReCLIner TUI Framework", Style: c.TextStyle().Bold().Color("cyan")}),
+						c.Text(c.TextProps{Content: "About", Style: c.TextStyle().Bold().Color("cyan")}),
+						c.Link(c.LinkProps{
+							Href:  "https://github.com/j-p/recliner",
+							Style: c.StyleProps{MarginTop: 1},
+						},
+							c.Text(c.TextProps{Content: "Visit GitHub Repository", Style: c.TextStyle().Color("blue").Underline()}),
+						),
 					),
 				},
 			},

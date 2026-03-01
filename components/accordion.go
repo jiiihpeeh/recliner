@@ -51,6 +51,7 @@ func Accordion(props any) vdom.Node {
 
 	allowMultiple, _ := util.GetProp[bool](props, "allowMultiple")
 	defaultExpanded, _ := util.GetProp[[]string](props, "defaultExpanded")
+	variant, _ := util.GetProp[string](props, "variant")
 	id, _ := util.GetProp[string](props, "id")
 
 	// State for expanded items
@@ -70,7 +71,7 @@ func Accordion(props any) vdom.Node {
 		// Create header button
 		headerID := id + "-header-" + item.ID
 		it := item // closure capture
-		header := createAccordionHeader(item.Title, isExpanded, headerID, func() {
+		header := createAccordionHeader(item.Title, isExpanded, headerID, variant, func() {
 			newExpanded := make([]string, 0, len(expandedItems))
 
 			if allowMultiple {
@@ -150,7 +151,7 @@ func Accordion(props any) vdom.Node {
 	}
 }
 
-func createAccordionHeader(title string, isExpanded bool, id string, onClick func()) vdom.Node {
+func createAccordionHeader(title string, isExpanded bool, id string, variant string, onClick func()) vdom.Node {
 	hc := hooks.GetContext()
 
 	focusRes := hc.UseFocus(hooks.FocusOptions{ID: id})
@@ -170,6 +171,13 @@ func createAccordionHeader(title string, isExpanded bool, id string, onClick fun
 	indicator := "[+]"
 	if isExpanded {
 		indicator = "[-]"
+	}
+
+	if variant == "unicode" {
+		indicator = "▶"
+		if isExpanded {
+			indicator = "▼"
+		}
 	}
 
 	// Style the header

@@ -82,34 +82,52 @@ type RadialGradient struct {
 }
 
 type Style struct {
-	Bold           bool
-	Italic         bool
-	Underline      bool
-	Strikethrough  bool
-	Inverse        bool
-	Blink          bool
-	Reverse        bool
-	Foreground     string
-	Background     string
-	Dim            bool
-	Hidden         bool
-	Display        string
-	FlexDirection  string
-	Gap            int
-	Position       string // "relative", "absolute", "fixed"
-	Top            int
-	Left           int
-	Right          int
-	Bottom         int
-	ZIndex         int
-	AlignItems     string // "flex-start", "center", "flex-end", "stretch"
-	AlignSelf      string // "auto", "flex-start", "center", "flex-end", "stretch"
-	JustifyContent string // "flex-start", "center", "flex-end", "space-between", "space-around", "space-evenly"
-	FlexGrow       int
-	FlexShrink     int
-	FlexBasis      int
-	Width          int
-	Height         int
+	Bold              bool
+	Italic            bool
+	Underline         bool
+	Strikethrough     bool
+	Inverse           bool
+	Blink             bool
+	Reverse           bool
+	Foreground        string
+	Background        string
+	Dim               bool
+	Hidden            bool
+	Display           string
+	FlexDirection     string
+	Gap               int
+	ColumnGap         int
+	RowGap            int
+	MarginTop         int
+	MarginBottom      int
+	MarginLeft        int
+	MarginRight       int
+	BorderTopColor    string
+	BorderBottomColor string
+	BorderLeftColor   string
+	BorderRightColor  string
+	BorderTopDim      bool
+	BorderBottomDim   bool
+	BorderLeftDim     bool
+	BorderRightDim    bool
+	BorderTop         bool
+	BorderBottom      bool
+	BorderLeft        bool
+	BorderRight       bool
+	Position          string // "relative", "absolute", "fixed"
+	Top               int
+	Left              int
+	Right             int
+	Bottom            int
+	ZIndex            int
+	AlignItems        string // "flex-start", "center", "flex-end", "stretch"
+	AlignSelf         string // "auto", "flex-start", "center", "flex-end", "stretch"
+	JustifyContent    string // "flex-start", "center", "flex-end", "space-between", "space-around", "space-evenly"
+	FlexGrow          int
+	FlexShrink        int
+	FlexBasis         int
+	Width             int
+	Height            int
 
 	ForegroundGradient *LinearGradient
 	BorderGradient     *RadialGradient
@@ -154,6 +172,24 @@ func (s *Style) Clone() Style {
 		FlexBasis:          s.FlexBasis,
 		Width:              s.Width,
 		Height:             s.Height,
+		ColumnGap:          s.ColumnGap,
+		RowGap:             s.RowGap,
+		MarginTop:          s.MarginTop,
+		MarginBottom:       s.MarginBottom,
+		MarginLeft:         s.MarginLeft,
+		MarginRight:        s.MarginRight,
+		BorderTopColor:     s.BorderTopColor,
+		BorderBottomColor:  s.BorderBottomColor,
+		BorderLeftColor:    s.BorderLeftColor,
+		BorderRightColor:   s.BorderRightColor,
+		BorderTopDim:       s.BorderTopDim,
+		BorderBottomDim:    s.BorderBottomDim,
+		BorderLeftDim:      s.BorderLeftDim,
+		BorderRightDim:     s.BorderRightDim,
+		BorderTop:          s.BorderTop,
+		BorderBottom:       s.BorderBottom,
+		BorderLeft:         s.BorderLeft,
+		BorderRight:        s.BorderRight,
 		ForegroundGradient: fg,
 		BorderGradient:     bg,
 	}
@@ -363,6 +399,70 @@ func ParseStyle(style any) Style {
 	s.Display = getString("display")
 	s.FlexDirection = getString("flexDirection")
 	s.Gap = getInt("gap")
+	s.ColumnGap = getInt("columnGap")
+	s.RowGap = getInt("rowGap")
+	s.MarginTop = getInt("marginTop")
+	s.MarginBottom = getInt("marginBottom")
+	s.MarginLeft = getInt("marginLeft")
+	s.MarginRight = getInt("marginRight")
+
+	s.BorderTopColor = getString("borderTopColor")
+	s.BorderBottomColor = getString("borderBottomColor")
+	s.BorderLeftColor = getString("borderLeftColor")
+	s.BorderRightColor = getString("borderRightColor")
+
+	s.BorderTopDim = getBool("borderTopDimColor")
+	s.BorderBottomDim = getBool("borderBottomDimColor")
+	s.BorderLeftDim = getBool("borderLeftDimColor")
+	s.BorderRightDim = getBool("borderRightDimColor")
+
+	s.BorderTop = true
+	s.BorderBottom = true
+	s.BorderLeft = true
+	s.BorderRight = true
+
+	if v, ok := util.GetProp[bool](style, "borderTop"); ok {
+		s.BorderTop = v
+	}
+	if v, ok := util.GetProp[bool](style, "borderBottom"); ok {
+		s.BorderBottom = v
+	}
+	if v, ok := util.GetProp[bool](style, "borderLeft"); ok {
+		s.BorderLeft = v
+	}
+	if v, ok := util.GetProp[bool](style, "borderRight"); ok {
+		s.BorderRight = v
+	}
+
+	if getBool("borderDimColor") {
+		s.BorderTopDim = true
+		s.BorderBottomDim = true
+		s.BorderLeftDim = true
+		s.BorderRightDim = true
+	}
+
+	// Shorthands
+	if mx := getInt("marginX"); mx != 0 {
+		s.MarginLeft = mx
+		s.MarginRight = mx
+	}
+	if my := getInt("marginY"); my != 0 {
+		s.MarginTop = my
+		s.MarginBottom = my
+	}
+	if m := getInt("margin"); m != 0 {
+		s.MarginTop = m
+		s.MarginBottom = m
+		s.MarginLeft = m
+		s.MarginRight = m
+	}
+	if s.ColumnGap == 0 {
+		s.ColumnGap = s.Gap
+	}
+	if s.RowGap == 0 {
+		s.RowGap = s.Gap
+	}
+
 	s.Position = getString("position")
 	s.Top = getInt("top")
 	s.Left = getInt("left")
@@ -555,7 +655,25 @@ func (s *Style) Equals(other *Style) bool {
 		s.ZIndex == other.ZIndex &&
 		s.FlexGrow == other.FlexGrow &&
 		s.FlexShrink == other.FlexShrink &&
-		s.FlexBasis == other.FlexBasis
+		s.FlexBasis == other.FlexBasis &&
+		s.ColumnGap == other.ColumnGap &&
+		s.RowGap == other.RowGap &&
+		s.MarginTop == other.MarginTop &&
+		s.MarginBottom == other.MarginBottom &&
+		s.MarginLeft == other.MarginLeft &&
+		s.MarginRight == other.MarginRight &&
+		s.BorderTopColor == other.BorderTopColor &&
+		s.BorderBottomColor == other.BorderBottomColor &&
+		s.BorderLeftColor == other.BorderLeftColor &&
+		s.BorderRightColor == other.BorderRightColor &&
+		s.BorderTopDim == other.BorderTopDim &&
+		s.BorderBottomDim == other.BorderBottomDim &&
+		s.BorderLeftDim == other.BorderLeftDim &&
+		s.BorderRightDim == other.BorderRightDim &&
+		s.BorderTop == other.BorderTop &&
+		s.BorderBottom == other.BorderBottom &&
+		s.BorderLeft == other.BorderLeft &&
+		s.BorderRight == other.BorderRight
 }
 
 type TreeState struct {
