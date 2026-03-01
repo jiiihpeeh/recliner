@@ -54,6 +54,16 @@ func RadioGroup(props any) vdom.Node {
 		direction = vdom.FlexDirectionColumn
 	}
 
+	gap, ok := util.GetProp[int](props, "gap")
+	if !ok {
+		// Default to 1 for column, 3 for row
+		if direction == vdom.FlexDirectionRow {
+			gap = 3
+		} else {
+			gap = 1
+		}
+	}
+
 	var children []vdom.Node
 
 	for _, opt := range options {
@@ -155,7 +165,7 @@ func RadioGroup(props any) vdom.Node {
 	groupStyle := vdom.Style{
 		Display:       vdom.DisplayFlex,
 		FlexDirection: direction,
-		Gap:           1,
+		Gap:           gap,
 	}
 
 	return &vdom.Element{

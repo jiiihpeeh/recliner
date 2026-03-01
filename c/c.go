@@ -551,6 +551,7 @@ type RadioGroupProps struct {
 	ID        string
 	Disabled  bool
 	Direction string // "row" or "column"
+	Gap       int    // Space between items
 }
 
 func RadioGroup(p RadioGroupProps) vdom.Node { return components.RadioGroup(p) }
