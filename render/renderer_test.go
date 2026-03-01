@@ -24,7 +24,7 @@ func TestBoxMargins(t *testing.T) {
 			BorderRight:  true,
 		},
 		Props: map[string]any{
-			"borderStyle": "single",
+			"borderStyle": vdom.BorderStyleSingle,
 		},
 	}
 
@@ -61,8 +61,8 @@ func TestBoxMarginsOverlap(t *testing.T) {
 	node := &vdom.Element{
 		Type: "box",
 		Style: vdom.Style{
-			Display:       "flex",
-			FlexDirection: "row",
+			Display:       vdom.DisplayFlex,
+			FlexDirection: vdom.FlexDirectionRow,
 			Width:         40,
 			Height:        10,
 		},
@@ -79,7 +79,7 @@ func TestBoxMarginsOverlap(t *testing.T) {
 					BorderLeft:   true,
 					BorderRight:  true,
 				},
-				Props: map[string]any{"borderStyle": "single"},
+				Props: map[string]any{"borderStyle": vdom.BorderStyleSingle},
 			},
 			&vdom.Element{
 				Type: "box",
@@ -92,7 +92,7 @@ func TestBoxMarginsOverlap(t *testing.T) {
 					BorderLeft:   true,
 					BorderRight:  true,
 				},
-				Props: map[string]any{"borderStyle": "single"},
+				Props: map[string]any{"borderStyle": vdom.BorderStyleSingle},
 			},
 		},
 	}

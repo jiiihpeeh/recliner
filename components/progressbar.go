@@ -70,7 +70,7 @@ func ProgressBar(props any) vdom.Node {
 			children = append(children, &vdom.Element{
 				Type:      "text",
 				InnerText: percentText,
-				Style:     vdom.Style{Display: "block"},
+				Style:     vdom.Style{Display: vdom.DisplayBlock},
 			})
 		}
 
@@ -100,7 +100,7 @@ func ProgressBar(props any) vdom.Node {
 		// Split back into filled/empty parts for gradient
 		// This is slightly tricky because the label might span across the boundary
 		// Simplest: one text node for the whole bar with gradient
-		barStyle := vdom.Style{Display: "block"}
+		barStyle := vdom.Style{Display: vdom.DisplayBlock}
 		if fromColor != "" && toColor != "" {
 			barStyle.ForegroundGradient = &vdom.LinearGradient{
 				From:      fromColor,
@@ -121,7 +121,7 @@ func ProgressBar(props any) vdom.Node {
 			children = append(children, &vdom.Element{
 				Type:      "text",
 				InnerText: percentText,
-				Style:     vdom.Style{Display: "block"},
+				Style:     vdom.Style{Display: vdom.DisplayBlock},
 			})
 		}
 
@@ -132,12 +132,12 @@ func ProgressBar(props any) vdom.Node {
 				Padding     int
 				Style       vdom.Style
 			}{
-				BorderStyle: "none",
+				BorderStyle: vdom.BorderStyleNone,
 				Padding:     0,
-				Style:       vdom.Style{Display: "flex", FlexDirection: "column"},
+				Style:       vdom.Style{Display: vdom.DisplayFlex, FlexDirection: vdom.FlexDirectionColumn},
 			},
 			Children: children,
-			Style:    vdom.Style{Display: "flex", FlexDirection: "column"},
+			Style:    vdom.Style{Display: vdom.DisplayFlex, FlexDirection: vdom.FlexDirectionColumn},
 		}
 	}
 
@@ -151,7 +151,7 @@ func ProgressBar(props any) vdom.Node {
 	var children []vdom.Node
 
 	if labelPos == "above" {
-		children = append(children, &vdom.Element{Type: "text", InnerText: percentText, Style: vdom.Style{Display: "block"}})
+		children = append(children, &vdom.Element{Type: "text", InnerText: percentText, Style: vdom.Style{Display: vdom.DisplayBlock}})
 	}
 
 	// For vertical, we build from top to bottom
@@ -166,7 +166,7 @@ func ProgressBar(props any) vdom.Node {
 
 	barContent := strings.Join(barChars, "\n")
 
-	barStyle := vdom.Style{Display: "block"}
+	barStyle := vdom.Style{Display: vdom.DisplayBlock}
 	if fromColor != "" && toColor != "" {
 		barStyle.ForegroundGradient = &vdom.LinearGradient{
 			From:      toColor, // Reverse because we render top to bottom but progress is bottom up
@@ -182,7 +182,7 @@ func ProgressBar(props any) vdom.Node {
 	})
 
 	if labelPos == "below" {
-		children = append(children, &vdom.Element{Type: "text", InnerText: percentText, Style: vdom.Style{Display: "block"}})
+		children = append(children, &vdom.Element{Type: "text", InnerText: percentText, Style: vdom.Style{Display: vdom.DisplayBlock}})
 	}
 
 	return &vdom.Element{
@@ -192,11 +192,11 @@ func ProgressBar(props any) vdom.Node {
 			Padding     int
 			Style       vdom.Style
 		}{
-			BorderStyle: "none",
+			BorderStyle: vdom.BorderStyleNone,
 			Padding:     0,
-			Style:       vdom.Style{Display: "flex", FlexDirection: "column", AlignItems: "center"},
+			Style:       vdom.Style{Display: vdom.DisplayFlex, FlexDirection: vdom.FlexDirectionColumn, AlignItems: vdom.AlignCenter},
 		},
 		Children: children,
-		Style:    vdom.Style{Display: "flex", FlexDirection: "column", AlignItems: "center"},
+		Style:    vdom.Style{Display: vdom.DisplayFlex, FlexDirection: vdom.FlexDirectionColumn, AlignItems: vdom.AlignCenter},
 	}
 }

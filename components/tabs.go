@@ -113,7 +113,7 @@ func Tabs(props any) vdom.Node {
 			}
 		} else if variant == "box" {
 			label = item.Title
-			borderStyle = "single"
+			borderStyle = vdom.BorderStyleSingle
 			if isActive {
 				borderStyle = "bold"
 			}
@@ -153,8 +153,8 @@ func Tabs(props any) vdom.Node {
 	}
 
 	rowStyle := vdom.Style{
-		Display:       "flex",
-		FlexDirection: "row",
+		Display:       vdom.DisplayFlex,
+		FlexDirection: vdom.FlexDirectionRow,
 		Gap:           1,
 	}
 	headerRow := &vdom.Element{
@@ -163,7 +163,7 @@ func Tabs(props any) vdom.Node {
 			BorderStyle string
 			Style       vdom.Style
 		}{
-			BorderStyle: "none",
+			BorderStyle: vdom.BorderStyleNone,
 			Style:       rowStyle,
 		},
 		Children: headerNodes,
@@ -185,21 +185,21 @@ func Tabs(props any) vdom.Node {
 			BorderStyle string
 			Padding     int
 		}{
-			BorderStyle: "single",
+			BorderStyle: vdom.BorderStyleSingle,
 			Padding:     1,
 		},
 		Children: []vdom.Node{activeContent},
 		Style:    vdom.Style{},
 	}
 
-	rootStyle := vdom.Style{Display: "flex", FlexDirection: "column"}
+	rootStyle := vdom.Style{Display: vdom.DisplayFlex, FlexDirection: vdom.FlexDirectionColumn}
 	return &vdom.Element{
 		Type: "box",
 		Props: struct {
 			BorderStyle string
 			Style       vdom.Style
 		}{
-			BorderStyle: "none",
+			BorderStyle: vdom.BorderStyleNone,
 			Style:       rootStyle,
 		},
 		Children: []vdom.Node{headerRow, contentBox},

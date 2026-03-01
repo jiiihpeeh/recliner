@@ -133,8 +133,8 @@ func ScrollBar(props any) vdom.Node {
 
 		// Wrap in a flex row so children render inline
 		boxStyle := style
-		boxStyle.Display = "flex"
-		boxStyle.FlexDirection = "row"
+		boxStyle.Display = vdom.DisplayFlex
+		boxStyle.FlexDirection = vdom.FlexDirectionRow
 
 		finalProps := struct {
 			Style       vdom.Style
@@ -142,7 +142,7 @@ func ScrollBar(props any) vdom.Node {
 			OnClick     func(events.MouseEvent)
 		}{
 			Style:       boxStyle,
-			BorderStyle: "none",
+			BorderStyle: vdom.BorderStyleNone,
 		}
 
 		if onClickProp, ok := util.GetProp[func(events.MouseEvent)](props, "onClick"); ok {
@@ -222,7 +222,7 @@ func ScrollBar(props any) vdom.Node {
 		OnClick     func(events.MouseEvent)
 	}{
 		Style:       style,
-		BorderStyle: "none",
+		BorderStyle: vdom.BorderStyleNone,
 	}
 
 	if onClickProp, ok := util.GetProp[func(events.MouseEvent)](props, "onClick"); ok {

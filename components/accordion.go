@@ -106,7 +106,7 @@ func Accordion(props any) vdom.Node {
 					BorderStyle string
 					Padding     int
 				}{
-					BorderStyle: "none",
+					BorderStyle: vdom.BorderStyleNone,
 					Padding:     1,
 				},
 				Children: []vdom.Node{item.Content},
@@ -126,7 +126,7 @@ func Accordion(props any) vdom.Node {
 				BorderStyle string
 				Padding     int
 			}{
-				BorderStyle: "none",
+				BorderStyle: vdom.BorderStyleNone,
 				Padding:     0,
 			},
 			Children: itemChildren,
@@ -134,7 +134,7 @@ func Accordion(props any) vdom.Node {
 		}
 	}
 
-	boxS := vdom.Style{Display: "flex", FlexDirection: "column"}
+	boxS := vdom.Style{Display: vdom.DisplayFlex, FlexDirection: vdom.FlexDirectionColumn}
 	return &vdom.Element{
 		Type: "box",
 		Props: struct {
@@ -142,7 +142,7 @@ func Accordion(props any) vdom.Node {
 			Padding     int
 			Style       vdom.Style
 		}{
-			BorderStyle: "none",
+			BorderStyle: vdom.BorderStyleNone,
 			Padding:     0,
 			Style:       boxS,
 		},
@@ -182,8 +182,8 @@ func createAccordionHeader(title string, isExpanded bool, id string, variant str
 
 	// Style the header
 	headerStyle := vdom.Style{
-		Display:    "flex",
-		AlignItems: "center",
+		Display:    vdom.DisplayFlex,
+		AlignItems: vdom.AlignCenter,
 		Foreground: "white",
 	}
 
@@ -200,7 +200,7 @@ func createAccordionHeader(title string, isExpanded bool, id string, variant str
 		Style       vdom.Style
 		OnClick     func(events.MouseEvent)
 	}{
-		BorderStyle: "none",
+		BorderStyle: vdom.BorderStyleNone,
 		Style:       headerStyle,
 		OnClick: func(e events.MouseEvent) {
 			if e.Action == events.MouseActionPress {

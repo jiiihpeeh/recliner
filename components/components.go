@@ -17,7 +17,7 @@ func Box(props any) vdom.Node {
 
 	borderStyle, ok := util.GetProp[string](props, "borderStyle")
 	if !ok || borderStyle == "" {
-		borderStyle = "single"
+		borderStyle = vdom.BorderStyleSingle
 	}
 	borderColor, _ := util.GetProp[string](props, "borderColor")
 	padding, _ := util.GetProp[int](props, "padding")
@@ -164,7 +164,7 @@ func Box(props any) vdom.Node {
 	var rowChildren []vdom.Node
 
 	borderSpace := 1
-	if borderStyle == "none" {
+	if borderStyle == vdom.BorderStyleNone {
 		borderSpace = 0
 	}
 
@@ -190,7 +190,7 @@ func Box(props any) vdom.Node {
 			ScrollTop   int
 			ScrollLeft  int
 		}{
-			BorderStyle: "none",
+			BorderStyle: vdom.BorderStyleNone,
 			Padding:     padding,
 			Style: vdom.Style{
 				Width:  contentBoxWidth,
@@ -273,11 +273,11 @@ func Box(props any) vdom.Node {
 			BorderStyle string
 			Style       vdom.Style
 		}{
-			BorderStyle: "none",
-			Style:       vdom.Style{Display: "flex", FlexDirection: "row"},
+			BorderStyle: vdom.BorderStyleNone,
+			Style:       vdom.Style{Display: vdom.DisplayFlex, FlexDirection: vdom.FlexDirectionRow},
 		},
 		Children: rowChildren,
-		Style:    vdom.Style{Display: "flex", FlexDirection: "row"},
+		Style:    vdom.Style{Display: vdom.DisplayFlex, FlexDirection: vdom.FlexDirectionRow},
 	}
 
 	finalChildren := []vdom.Node{mainContent}

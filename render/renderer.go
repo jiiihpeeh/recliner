@@ -443,11 +443,11 @@ func (ctx *RenderContext) measureBox(n *vdom.Element, maxWidth int) Layout {
 	}
 
 	var cl Layout
-	flexDir := util.Ternary(n.Style.FlexDirection == "", "row", n.Style.FlexDirection)
+	flexDir := util.Ternary(n.Style.FlexDirection == "", vdom.FlexDirectionRow, n.Style.FlexDirection)
 	columnGap := n.Style.ColumnGap
 	rowGap := n.Style.RowGap
 
-	if n.Style.Display == "flex" {
+	if n.Style.Display == vdom.DisplayFlex {
 		cl = ctx.measureFlex(n, innerMaxWidth, flexDir, columnGap, rowGap)
 	} else {
 		for i, child := range n.Children {
@@ -486,7 +486,7 @@ func (ctx *RenderContext) measureBox(n *vdom.Element, maxWidth int) Layout {
 func (ctx *RenderContext) measureFlex(n *vdom.Element, maxWidth int, dir string, columnGap, rowGap int) Layout {
 	var cl Layout
 	first := true
-	gap := util.Ternary(dir == "row", columnGap, rowGap)
+	gap := util.Ternary(dir == vdom.FlexDirectionRow, columnGap, rowGap)
 	totalGrow, totalShrink, totalBasis := 0, 0, 0
 	type flexItem struct {
 		node                vdom.Node
@@ -501,7 +501,7 @@ func (ctx *RenderContext) measureFlex(n *vdom.Element, maxWidth int, dir string,
 		}
 		childStyle := getStyle(child)
 		childLayout := ctx.measureNode(child, maxWidth)
-		basis := util.Ternary(childStyle.FlexBasis == 0, util.Ternary(dir == "row", childLayout.Width, childLayout.Height), childStyle.FlexBasis)
+		basis := util.Ternary(childStyle.FlexBasis == 0, util.Ternary(dir == vdom.FlexDirectionRow, childLayout.Width, childLayout.Height), childStyle.FlexBasis)
 		grow := childStyle.FlexGrow
 		shrink := util.Ternary(childStyle.FlexShrink == 0, 1, childStyle.FlexShrink)
 
@@ -516,7 +516,7 @@ func (ctx *RenderContext) measureFlex(n *vdom.Element, maxWidth int, dir string,
 	}
 
 	mainSize := maxWidth
-	if dir == "column" {
+	if dir == vdom.FlexDirectionColumn {
 		p, _ := util.GetProp[int](n.Props, "padding")
 		bs := util.Ternary(util.GetPropString(n.Props, "borderStyle") == "none", 0, 1)
 		mainSize = util.Ternary(n.Style.Height != 0, n.Style.Height-(p*2)-(bs*2), totalBasis)
@@ -533,7 +533,7 @@ func (ctx *RenderContext) measureFlex(n *vdom.Element, maxWidth int, dir string,
 		}
 
 		l := ctx.layouts[item.node]
-		if dir == "row" {
+		if dir == vdom.FlexDirectionRow {
 			l.Width = finalSize
 			cl.Width += finalSize
 			if !first {
@@ -585,14 +585,14 @@ func (ctx *RenderContext) layoutNode(node vdom.Node, x, y int) {
 		cx, cy := x+bs+p-sl+n.Style.MarginLeft, y+bs+p-st+n.Style.MarginTop
 		curX, curY := cx, cy
 
-		dir := "column"
-		if n.Style.Display == "flex" {
-			dir = util.Ternary(n.Style.FlexDirection == "", "row", n.Style.FlexDirection)
+		dir := vdom.FlexDirectionColumn
+		if n.Style.Display == vdom.DisplayFlex {
+			dir = util.Ternary(n.Style.FlexDirection == "", vdom.FlexDirectionRow, n.Style.FlexDirection)
 		}
 		columnGap := n.Style.ColumnGap
 		rowGap := n.Style.RowGap
 
-		if n.Style.Display == "flex" {
+		if n.Style.Display == vdom.DisplayFlex {
 			curX, curY = ctx.applyJustification(n, l, bs, p, cx, cy, dir, columnGap, rowGap)
 		}
 
@@ -608,11 +608,11 @@ func (ctx *RenderContext) layoutNode(node vdom.Node, x, y int) {
 			}
 
 			tx, ty := curX, curY
-			if n.Style.Display == "flex" {
+			if n.Style.Display == vdom.DisplayFlex {
 				tx, ty = ctx.applyAlignment(n, childLayout, childStyle, cx, cy, tx, ty, dir, bs, p, l)
 			}
 			ctx.layoutNode(child, tx, ty)
-			if dir == "row" {
+			if dir == vdom.FlexDirectionRow {
 				curX += childLayout.Width + columnGap
 			} else {
 				curY += childLayout.Height + rowGap
@@ -630,13 +630,13 @@ func (ctx *RenderContext) layoutNode(node vdom.Node, x, y int) {
 
 func (ctx *RenderContext) applyJustification(n *vdom.Element, l Layout, bs, p int, cx, cy int, dir string, columnGap, rowGap int) (int, int) {
 	tcw, tch, num := 0, 0, 0
-	gap := util.Ternary(dir == "row", columnGap, rowGap)
+	gap := util.Ternary(dir == vdom.FlexDirectionRow, columnGap, rowGap)
 	for _, child := range n.Children {
 		if isAbsolute(child) {
 			continue
 		}
 		cl := ctx.layouts[child]
-		if dir == "row" {
+		if dir == vdom.FlexDirectionRow {
 			if num > 0 {
 				tcw += gap
 			}
@@ -652,11 +652,11 @@ func (ctx *RenderContext) applyJustification(n *vdom.Element, l Layout, bs, p in
 	curX, curY := cx, cy
 	contentW := l.Width - bs*2 - p*2 - n.Style.MarginLeft - n.Style.MarginRight
 	contentH := l.Height - bs*2 - p*2 - n.Style.MarginTop - n.Style.MarginBottom
-	if dir == "row" {
+	if dir == vdom.FlexDirectionRow {
 		switch n.Style.JustifyContent {
-		case "center":
+		case vdom.AlignCenter:
 			curX = cx + (contentW-tcw)/2
-		case "flex-end":
+		case vdom.AlignFlexEnd:
 			curX = cx + (contentW - tcw)
 		case "space-around":
 			if num > 0 {
@@ -671,9 +671,9 @@ func (ctx *RenderContext) applyJustification(n *vdom.Element, l Layout, bs, p in
 		}
 	} else {
 		switch n.Style.JustifyContent {
-		case "center":
+		case vdom.AlignCenter:
 			curY = cy + (contentH-tch)/2
-		case "flex-end":
+		case vdom.AlignFlexEnd:
 			curY = cy + (contentH - tch)
 		case "space-around":
 			if num > 0 {
@@ -694,18 +694,18 @@ func (ctx *RenderContext) applyAlignment(n *vdom.Element, cl Layout, cs vdom.Sty
 	align := util.Ternary(cs.AlignSelf != "" && cs.AlignSelf != "auto", cs.AlignSelf, n.Style.AlignItems)
 	contentW := l.Width - bs*2 - p*2 - n.Style.MarginLeft - n.Style.MarginRight
 	contentH := l.Height - bs*2 - p*2 - n.Style.MarginTop - n.Style.MarginBottom
-	if dir == "row" {
+	if dir == vdom.FlexDirectionRow {
 		switch align {
-		case "center":
+		case vdom.AlignCenter:
 			ty = cy + (contentH-cl.Height)/2
-		case "flex-end":
+		case vdom.AlignFlexEnd:
 			ty = cy + (contentH - cl.Height)
 		}
 	} else {
 		switch align {
-		case "center":
+		case vdom.AlignCenter:
 			tx = cx + (contentW-cl.Width)/2
-		case "flex-end":
+		case vdom.AlignFlexEnd:
 			tx = cx + (contentW - cl.Width)
 		}
 	}
@@ -875,11 +875,11 @@ func (ctx *RenderContext) drawBox(el *vdom.Element, layout Layout, buf *Buffer, 
 	style, w, h, x, y := el.Style, layout.Width, layout.Height, layout.X, layout.Y
 	bs := util.GetPropString(el.Props, "borderStyle")
 	if bs == "" {
-		bs = "single"
+		bs = vdom.BorderStyleSingle
 	}
 	bc := util.GetPropString(el.Props, "borderColor")
 
-	if bs != "none" {
+	if bs != vdom.BorderStyleNone {
 		for i := 0; i < w; i++ {
 			if style.BorderTop {
 				color := util.Ternary(style.BorderTopColor != "", style.BorderTopColor, bc)
@@ -903,7 +903,7 @@ func (ctx *RenderContext) drawBox(el *vdom.Element, layout Layout, buf *Buffer, 
 	}
 
 	if style.Background != "" {
-		fillS := util.Ternary(bs == "none", 0, 1)
+		fillS := util.Ternary(bs == vdom.BorderStyleNone, 0, 1)
 		for iy := fillS; iy < h-fillS; iy++ {
 			yp := y + iy
 			if yp < clip.Y || yp >= clip.Y+clip.Height {
@@ -940,7 +940,7 @@ func (ctx *RenderContext) drawBorderCell(x, y int, char rune, el *vdom.Element, 
 
 func getBorderChar(style, side string, idx, total int) rune {
 	switch style {
-	case "round":
+	case vdom.BorderStyleRound:
 		if side == "top" {
 			if idx == 0 {
 				return '╭'
@@ -960,7 +960,7 @@ func getBorderChar(style, side string, idx, total int) rune {
 			return '─'
 		}
 		return '│'
-	case "double":
+	case vdom.BorderStyleDouble:
 		if side == "top" {
 			if idx == 0 {
 				return '╔'

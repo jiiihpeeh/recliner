@@ -73,14 +73,14 @@ func CheckBox(props any) vdom.Node {
 
 	if label != nil {
 		// Return Box with flex row containing check symbol and label
-		boxStyle := vdom.Style{Display: "flex", Gap: 1}
+		boxStyle := vdom.Style{Display: vdom.DisplayFlex, Gap: 1}
 		boxProps := struct {
 			BorderStyle string
 			Padding     int
 			Style       vdom.Style
 			OnClick     func(events.MouseEvent)
 		}{
-			BorderStyle: "none",
+			BorderStyle: vdom.BorderStyleNone,
 			Padding:     0,
 			Style:       boxStyle,
 		}

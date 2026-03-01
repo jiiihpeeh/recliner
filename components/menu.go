@@ -125,7 +125,7 @@ func Menu(props any) vdom.Node {
 			ZIndex:     999, // High zIndex as requested
 			Background: "black",
 		},
-		BorderStyle: "round",
+		BorderStyle: vdom.BorderStyleRound,
 		BorderColor: "cyan",
 		Children:    children,
 	})

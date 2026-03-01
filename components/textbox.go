@@ -586,7 +586,7 @@ func TextBox(props any) vdom.Node {
 					}
 				}
 			}
-			charStyle := vdom.Style{Display: "inline"}
+			charStyle := vdom.Style{Display: vdom.DisplayInline}
 			if isSelected {
 				charStyle.Reverse = true
 			}
@@ -627,7 +627,7 @@ func TextBox(props any) vdom.Node {
 		}
 
 		if isAtEndOfVisualLine && isLastVisualLineOfPhysicalLine && cvw < currentTextWidth {
-			rsStyle := vdom.Style{Reverse: true, Display: "inline"}
+			rsStyle := vdom.Style{Reverse: true, Display: vdom.DisplayInline}
 			lineChildren = append(lineChildren, &vdom.Element{
 				Type: "text",
 				Props: struct {
@@ -639,14 +639,14 @@ func TextBox(props any) vdom.Node {
 				Style:     rsStyle,
 			})
 		}
-		boxS := vdom.Style{Display: "flex", FlexDirection: "row", Height: 1}
+		boxS := vdom.Style{Display: vdom.DisplayFlex, FlexDirection: vdom.FlexDirectionRow, Height: 1}
 		contentChildren = append(contentChildren, &vdom.Element{
 			Type: "box",
 			Props: struct {
 				BorderStyle string
 				Style       vdom.Style
 			}{
-				BorderStyle: "none",
+				BorderStyle: vdom.BorderStyleNone,
 				Style:       boxS,
 			},
 			Children: lineChildren,
@@ -718,7 +718,7 @@ func TextBox(props any) vdom.Node {
 			},
 		}
 
-		rowStyle := vdom.Style{Display: "flex", FlexDirection: "row"}
+		rowStyle := vdom.Style{Display: vdom.DisplayFlex, FlexDirection: vdom.FlexDirectionRow}
 		borderSpace := 1
 		innerWidth := width - (borderSpace * 2)
 		cElemStyle := vdom.Style{Width: innerWidth - 1, Height: height}
@@ -731,7 +731,7 @@ func TextBox(props any) vdom.Node {
 				OnClick     func(events.MouseEvent)
 			}{
 				Padding:     0,
-				BorderStyle: "none",
+				BorderStyle: vdom.BorderStyleNone,
 				Style:       cElemStyle,
 				OnClick:     handleMouse,
 			},
@@ -753,7 +753,7 @@ func TextBox(props any) vdom.Node {
 				BorderColor string
 				Style       vdom.Style
 			}{
-				BorderStyle: "single",
+				BorderStyle: vdom.BorderStyleSingle,
 				BorderColor: "blue",
 				Style:       rootStyle,
 			},
@@ -764,7 +764,7 @@ func TextBox(props any) vdom.Node {
 					BorderStyle string
 				}{
 					Style:       rowStyle,
-					BorderStyle: "none",
+					BorderStyle: vdom.BorderStyleNone,
 				},
 				Children: []vdom.Node{contentElem, ScrollBar(sbProps)},
 				Style:    rowStyle,
@@ -790,7 +790,7 @@ func TextBox(props any) vdom.Node {
 			Style       vdom.Style
 			OnClick     func(events.MouseEvent)
 		}{
-			BorderStyle: "single",
+			BorderStyle: vdom.BorderStyleSingle,
 			BorderColor: "blue",
 			Padding:     0,
 			Style:       rootStyle,

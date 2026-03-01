@@ -483,7 +483,7 @@ func Input(props any) vdom.Node {
 		borderColor = borderColorProp
 	}
 
-	bs := "single"
+	bs := vdom.BorderStyleSingle
 	if borderStyle != "" {
 		bs = borderStyle
 	}
@@ -500,8 +500,8 @@ func Input(props any) vdom.Node {
 		BorderStyle: bs, BorderColor: borderColor, Padding: 0, ClearFocusOnClick: false,
 		Style: vdom.Style{
 			Width:         width,
-			Display:       "flex",
-			FlexDirection: "row",
+			Display:       vdom.DisplayFlex,
+			FlexDirection: vdom.FlexDirectionRow,
 			BorderTop:     true,
 			BorderBottom:  true,
 			BorderLeft:    true,

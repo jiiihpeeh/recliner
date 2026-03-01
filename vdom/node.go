@@ -120,9 +120,9 @@ type Style struct {
 	Right             int
 	Bottom            int
 	ZIndex            int
-	AlignItems        string // "flex-start", "center", "flex-end", "stretch"
-	AlignSelf         string // "auto", "flex-start", "center", "flex-end", "stretch"
-	JustifyContent    string // "flex-start", "center", "flex-end", "space-between", "space-around", "space-evenly"
+	AlignItems        string // vdom.AlignFlexStart, vdom.AlignCenter, vdom.AlignFlexEnd, vdom.AlignStretch
+	AlignSelf         string // "auto", vdom.AlignFlexStart, vdom.AlignCenter, vdom.AlignFlexEnd, vdom.AlignStretch
+	JustifyContent    string // vdom.AlignFlexStart, vdom.AlignCenter, vdom.AlignFlexEnd, vdom.JustifySpaceBetween, "space-around", "space-evenly"
 	FlexGrow          int
 	FlexShrink        int
 	FlexBasis         int

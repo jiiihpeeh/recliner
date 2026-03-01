@@ -62,7 +62,7 @@ func Button(props any) vdom.Node {
 	// Create the button element
 	borderStyle, ok := util.GetProp[string](props, "borderStyle")
 	if !ok || borderStyle == "" {
-		borderStyle = "single"
+		borderStyle = vdom.BorderStyleSingle
 		if variant == "text" {
 			borderStyle = "none"
 		}
@@ -106,8 +106,8 @@ func Button(props any) vdom.Node {
 
 func getButtonStyle(variant, style, size string, focused, disabled bool) vdom.Style {
 	baseStyle := vdom.Style{
-		Display:    "flex",
-		AlignItems: "center",
+		Display:    vdom.DisplayFlex,
+		AlignItems: vdom.AlignCenter,
 	}
 
 	// Size/Padding simulation (vdom.Style doesn't have Padding, but renderer handles Props)

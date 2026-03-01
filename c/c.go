@@ -23,17 +23,17 @@ const (
 type DisplayStyle = string
 
 const (
-	DisplayBlock  DisplayStyle = "block"
-	DisplayInline DisplayStyle = "inline"
-	DisplayFlex   DisplayStyle = "flex"
-	DisplayNone   DisplayStyle = "none"
+	DisplayBlock  DisplayStyle = vdom.DisplayBlock
+	DisplayInline DisplayStyle = vdom.DisplayInline
+	DisplayFlex   DisplayStyle = vdom.DisplayFlex
+	DisplayNone   DisplayStyle = vdom.DisplayNone
 )
 
 type FlexDirection = string
 
 const (
-	FlexDirectionRow    FlexDirection = "row"
-	FlexDirectionColumn FlexDirection = "column"
+	FlexDirectionRow    FlexDirection = vdom.FlexDirectionRow
+	FlexDirectionColumn FlexDirection = vdom.FlexDirectionColumn
 )
 
 type JustifyContent = string
