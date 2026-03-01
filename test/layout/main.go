@@ -200,6 +200,17 @@ func main() {
 									{ID: "u2", Title: "Section 2", Content: c.Text(c.TextProps{Content: "Content 2"})},
 								},
 							}),
+							c.Spacer(1),
+							c.Text(c.TextProps{Content: "Radio Group", Style: c.TextStyle().Bold()}),
+							c.RadioGroup(c.RadioGroupProps{
+								ID:        "test-radio",
+								Value:     "opt1",
+								Direction: c.FlexDirectionColumn,
+								Options: []c.RadioOption{
+									{Label: "Option 1", Value: "opt1"},
+									{Label: "Option 2", Value: "opt2"},
+								},
+							}),
 						),
 
 						// Tabs Unicode

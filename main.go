@@ -95,6 +95,9 @@ func createApp(props any, debugMode bool) vdom.Node {
 	refreshJoke, setRefreshJoke := hooks.UseState[bool](hooksCtx, false)
 	lastKeys, setLastKeys := hooks.UseState[[]string](hooksCtx, []string{})
 
+	// Radio group state
+	radioVal, setRadioVal := hooks.UseState[string](hooksCtx, "opt1")
+
 	// Pre-create inputs to ensure hook order stability even if they are not rendered
 	nameInput := c.Input(c.InputProps{ID: "input1", Value: inputVal, OnChange: func(s string) { setInputVal(s) }, Placeholder: "Enter name...", Width: 30, BorderStyle: c.BorderStyleSingle, BorderColor: "white"})
 	emailInput := c.Input(c.InputProps{ID: "input2", Value: inputVal2, OnChange: func(s string) { setInputVal2(s) }, Placeholder: "Enter email...", Width: 30, BorderStyle: c.BorderStyleSingle, BorderColor: "white"})
@@ -282,6 +285,20 @@ func createApp(props any, debugMode bool) vdom.Node {
 							nameInput,
 							c.Text(c.TextProps{Content: "Email:"}),
 							emailInput,
+							c.Spacer(1),
+							c.Text(c.TextProps{Content: "Select an option:", Style: c.TextStyle().Bold()}),
+							c.RadioGroup(c.RadioGroupProps{
+								ID:        "radio-group-1",
+								Value:     radioVal,
+								OnChange:  setRadioVal,
+								Direction: c.FlexDirectionRow,
+								Options: []c.RadioOption{
+									{Label: "Option 1", Value: "opt1"},
+									{Label: "Option 2", Value: "opt2"},
+									{Label: "Option 3", Value: "opt3"},
+								},
+							}),
+							c.Text(c.TextProps{Content: "Selected: " + radioVal, Style: c.TextStyle().Color("gray")}),
 						),
 					},
 					{

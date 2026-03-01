@@ -539,7 +539,24 @@ func Tabs(p TabsProps) vdom.Node               { return components.Tabs(p) }
 func Image(p ImageProps) vdom.Node             { return components.Image(p) }
 func ProgressBar(p ProgressBarProps) vdom.Node { return components.ProgressBar(p) }
 
+type RadioOption struct {
+	Label string
+	Value string
+}
+
+type RadioGroupProps struct {
+	Options   []RadioOption
+	Value     string
+	OnChange  func(string)
+	ID        string
+	Disabled  bool
+	Direction string // "row" or "column"
+}
+
+func RadioGroup(p RadioGroupProps) vdom.Node { return components.RadioGroup(p) }
+
 func Spacer(h int) vdom.Node {
+
 	c := make([]vdom.Node, h)
 	for i := range h {
 		c[i] = &vdom.TextNode{Content: " "}
