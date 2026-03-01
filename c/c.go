@@ -7,7 +7,7 @@ import (
 	"github.com/j-p/recliner/vdom"
 )
 
-type BorderStyle string
+type BorderStyle = string
 
 const (
 	BorderStyleNone         BorderStyle = "none"
@@ -20,7 +20,7 @@ const (
 	BorderStyleClassic      BorderStyle = "classic"
 )
 
-type DisplayStyle string
+type DisplayStyle = string
 
 const (
 	DisplayBlock  DisplayStyle = "block"
@@ -29,14 +29,14 @@ const (
 	DisplayNone   DisplayStyle = "none"
 )
 
-type FlexDirection string
+type FlexDirection = string
 
 const (
 	FlexDirectionRow    FlexDirection = "row"
 	FlexDirectionColumn FlexDirection = "column"
 )
 
-type JustifyContent string
+type JustifyContent = string
 
 const (
 	JustifyContentFlexStart    JustifyContent = "flex-start"
@@ -48,7 +48,7 @@ const (
 	JustifyContentStretch      JustifyContent = "stretch"
 )
 
-type AlignItems string
+type AlignItems = string
 
 const (
 	AlignItemsFlexStart AlignItems = "flex-start"
@@ -58,7 +58,7 @@ const (
 	AlignItemsBaseline  AlignItems = "baseline"
 )
 
-type AlignSelf string
+type AlignSelf = string
 
 const (
 	AlignSelfAuto      AlignSelf = "auto"
@@ -68,7 +68,7 @@ const (
 	AlignSelfStretch   AlignSelf = "stretch"
 )
 
-type Position string
+type Position = string
 
 const (
 	PositionRelative Position = "relative"
@@ -76,7 +76,7 @@ const (
 	PositionFixed    Position = "fixed"
 )
 
-type ButtonVariant string
+type ButtonVariant = string
 
 const (
 	ButtonVariantFilled   ButtonVariant = "filled"
@@ -84,7 +84,7 @@ const (
 	ButtonVariantText     ButtonVariant = "text"
 )
 
-type ButtonStyle string
+type ButtonStyle = string
 
 const (
 	ButtonStylePrimary   ButtonStyle = "primary"
@@ -95,7 +95,7 @@ const (
 	ButtonStyleInfo      ButtonStyle = "info"
 )
 
-type ButtonSize string
+type ButtonSize = string
 
 const (
 	ButtonSizeSmall  ButtonSize = "small"
@@ -392,7 +392,7 @@ type ScrollBarProps struct {
 	OnClick                func(events.MouseEvent)
 }
 
-type AccordionVariant string
+type AccordionVariant = string
 
 const (
 	AccordionVariantClassic AccordionVariant = "classic"
@@ -412,7 +412,7 @@ type AccordionProps struct {
 	ID              string
 }
 
-type TabsVariant string
+type TabsVariant = string
 
 const (
 	TabsVariantClassic TabsVariant = "classic"
