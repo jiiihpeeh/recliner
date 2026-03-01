@@ -375,6 +375,8 @@ type InputProps struct {
 	OnChange           func(string)
 	ID                 string
 	AutoFocus          bool
+	BorderStyle        BorderStyle
+	BorderColor        string
 }
 
 type MenuProps struct {

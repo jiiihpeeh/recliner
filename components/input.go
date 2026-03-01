@@ -37,6 +37,8 @@ func Input(props any) vdom.Node {
 	}
 	id, _ := util.GetProp[string](props, "id")
 	autoFocus, _ := util.GetProp[bool](props, "autoFocus")
+	borderStyle, _ := util.GetProp[string](props, "borderStyle")
+	borderColorProp, _ := util.GetProp[string](props, "borderColor")
 
 	focusRes := hc.UseFocus(hooks.FocusOptions{ID: id, AutoFocus: autoFocus})
 	focused := focusRes.IsFocused
@@ -477,6 +479,14 @@ func Input(props any) vdom.Node {
 	if focused {
 		borderColor = "green"
 	}
+	if borderColorProp != "" {
+		borderColor = borderColorProp
+	}
+
+	bs := "single"
+	if borderStyle != "" {
+		bs = borderStyle
+	}
 
 	return Box(struct {
 		BorderStyle       string
@@ -487,7 +497,7 @@ func Input(props any) vdom.Node {
 		Children          []vdom.Node
 		OnClick           func(events.MouseEvent)
 	}{
-		BorderStyle: "single", BorderColor: borderColor, Padding: 0, ClearFocusOnClick: false,
+		BorderStyle: bs, BorderColor: borderColor, Padding: 0, ClearFocusOnClick: false,
 		Style:    vdom.Style{Width: width, Display: "flex", FlexDirection: "row"},
 		Children: children, OnClick: handleMouse,
 	})

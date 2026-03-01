@@ -96,9 +96,9 @@ func createApp(props any, debugMode bool) vdom.Node {
 	lastKeys, setLastKeys := hooks.UseState[[]string](hooksCtx, []string{})
 
 	// Pre-create inputs to ensure hook order stability even if they are not rendered
-	nameInput := c.Input(c.InputProps{ID: "input1", Value: inputVal, OnChange: func(s string) { setInputVal(s) }, Placeholder: "Enter name...", Width: 30})
-	emailInput := c.Input(c.InputProps{ID: "input2", Value: inputVal2, OnChange: func(s string) { setInputVal2(s) }, Placeholder: "Enter email...", Width: 30})
-	cmdInField := c.Input(c.InputProps{ID: "cmd-in", Value: cmdInput, OnChange: setCmdInput, Width: 20})
+	nameInput := c.Input(c.InputProps{ID: "input1", Value: inputVal, OnChange: func(s string) { setInputVal(s) }, Placeholder: "Enter name...", Width: 30, BorderStyle: c.BorderStyleSingle, BorderColor: "white"})
+	emailInput := c.Input(c.InputProps{ID: "input2", Value: inputVal2, OnChange: func(s string) { setInputVal2(s) }, Placeholder: "Enter email...", Width: 30, BorderStyle: c.BorderStyleSingle, BorderColor: "white"})
+	cmdInField := c.Input(c.InputProps{ID: "cmd-in", Value: cmdInput, OnChange: setCmdInput, Width: 20, BorderStyle: c.BorderStyleSingle, BorderColor: "white"})
 
 	jokeRes := hooks.UseFetch[ChuckNorrisJoke](hooksCtx, fmt.Sprintf("https://api.chucknorris.io/jokes/random?t=%v", refreshJoke))
 	textBoxValue, _ := hooks.UseState[string](hooksCtx, "")
