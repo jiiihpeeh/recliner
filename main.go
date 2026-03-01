@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"math/big"
 	"os/exec"
 	"strings"
 	"time"
@@ -66,21 +65,6 @@ func createApp(props any, debugMode bool) vdom.Node {
 
 	count, setCount := hooks.UseState[int](hooksCtx, 0)
 	randomMode, setRandomMode := hooks.UseState[bool](hooksCtx, false)
-	fibIndex, setFibIndex := hooks.UseState[int](hooksCtx, 100)
-
-	fibValue := hooks.UseMemo(hooksCtx, func() *big.Int {
-		if fibIndex <= 1 {
-			return big.NewInt(int64(fibIndex))
-		}
-		a, b := big.NewInt(0), big.NewInt(1)
-		tmp := new(big.Int)
-		for i := 2; i <= fibIndex; i++ {
-			tmp.Add(a, b)
-			a.Set(b)
-			b.Set(tmp)
-		}
-		return new(big.Int).Set(b)
-	}, []any{fibIndex})
 
 	effectMsg, _ := hooks.UseState[string](hooksCtx, "Active")
 	sysStats := UseSystemStats(hooksCtx)
@@ -130,16 +114,10 @@ func createApp(props any, debugMode bool) vdom.Node {
 			setCount(count + 1)
 		case "down":
 			setCount(count - 1)
-		case "pageup":
-			setFibIndex(fibIndex + 1)
-		case "pagedown":
-			if fibIndex > 0 {
-				setFibIndex(fibIndex - 1)
-			}
 		case "r":
 			setRandomMode(!randomMode)
 		}
-	}, []any{count, randomMode, fibIndex, lastKeys})
+	}, []any{count, randomMode, lastKeys})
 
 	return c.Box(c.BoxProps{
 		BorderStyle: c.BorderStyleRound,
@@ -182,9 +160,6 @@ func createApp(props any, debugMode bool) vdom.Node {
 		},
 			c.Box(c.BoxProps{BorderStyle: c.BorderStyleNone, Style: c.StyleProps{Background: "red"}},
 				c.Text(c.TextProps{Content: fmt.Sprintf(" Count: %d ", count), Style: c.TextStyle().Bold().Color("white")}),
-			),
-			c.Box(c.BoxProps{BorderStyle: c.BorderStyleNone, Style: c.StyleProps{Background: "green"}},
-				c.Text(c.TextProps{Content: fmt.Sprintf(" Fib: %s ", fibValue.String()), Style: c.TextStyle().Bold().Color("black")}),
 			),
 			c.Text(c.TextProps{Content: " Mode: " + func() string {
 				if randomMode {
@@ -293,6 +268,7 @@ func createApp(props any, debugMode bool) vdom.Node {
 								Value:     radioValH,
 								OnChange:  setRadioValH,
 								Direction: c.FlexDirectionRow,
+								Gap:       2,
 								Options: []c.RadioOption{
 									{Label: "Option 1", Value: "opt1"},
 									{Label: "Option 2", Value: "opt2"},
