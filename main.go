@@ -95,8 +95,9 @@ func createApp(props any, debugMode bool) vdom.Node {
 	refreshJoke, setRefreshJoke := hooks.UseState[bool](hooksCtx, false)
 	lastKeys, setLastKeys := hooks.UseState[[]string](hooksCtx, []string{})
 
-	// Radio group state
-	radioVal, setRadioVal := hooks.UseState[string](hooksCtx, "opt1")
+	// Radio group states
+	radioValH, setRadioValH := hooks.UseState[string](hooksCtx, "opt1")
+	radioValV, setRadioValV := hooks.UseState[string](hooksCtx, "opt1")
 
 	// Pre-create inputs to ensure hook order stability even if they are not rendered
 	nameInput := c.Input(c.InputProps{ID: "input1", Value: inputVal, OnChange: func(s string) { setInputVal(s) }, Placeholder: "Enter name...", Width: 30, BorderStyle: c.BorderStyleSingle, BorderColor: "white"})
@@ -286,11 +287,11 @@ func createApp(props any, debugMode bool) vdom.Node {
 							c.Text(c.TextProps{Content: "Email:"}),
 							emailInput,
 							c.Spacer(1),
-							c.Text(c.TextProps{Content: "Select an option:", Style: c.TextStyle().Bold()}),
+							c.Text(c.TextProps{Content: "Select an option (Horizontal):", Style: c.TextStyle().Bold()}),
 							c.RadioGroup(c.RadioGroupProps{
-								ID:        "radio-group-1",
-								Value:     radioVal,
-								OnChange:  setRadioVal,
+								ID:        "radio-group-h",
+								Value:     radioValH,
+								OnChange:  setRadioValH,
 								Direction: c.FlexDirectionRow,
 								Options: []c.RadioOption{
 									{Label: "Option 1", Value: "opt1"},
@@ -298,7 +299,23 @@ func createApp(props any, debugMode bool) vdom.Node {
 									{Label: "Option 3", Value: "opt3"},
 								},
 							}),
-							c.Text(c.TextProps{Content: "Selected: " + radioVal, Style: c.TextStyle().Color("gray")}),
+							c.Text(c.TextProps{Content: "Selected: " + radioValH, Style: c.TextStyle().Color("gray")}),
+
+							c.Spacer(1),
+
+							c.Text(c.TextProps{Content: "Select an option (Vertical):", Style: c.TextStyle().Bold()}),
+							c.RadioGroup(c.RadioGroupProps{
+								ID:        "radio-group-v",
+								Value:     radioValV,
+								OnChange:  setRadioValV,
+								Direction: c.FlexDirectionColumn,
+								Options: []c.RadioOption{
+									{Label: "First Choice", Value: "opt1"},
+									{Label: "Second Choice", Value: "opt2"},
+									{Label: "Third Choice", Value: "opt3"},
+								},
+							}),
+							c.Text(c.TextProps{Content: "Selected: " + radioValV, Style: c.TextStyle().Color("gray")}),
 						),
 					},
 					{
