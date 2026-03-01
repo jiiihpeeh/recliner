@@ -1,10 +1,10 @@
 package c
 
 import (
-	"github.com/j-p/recliner/components"
-	"github.com/j-p/recliner/events"
-	"github.com/j-p/recliner/utils"
-	"github.com/j-p/recliner/vdom"
+	"github.com/jiiihpeeh/recliner/components"
+	"github.com/jiiihpeeh/recliner/events"
+	"github.com/jiiihpeeh/recliner/utils"
+	"github.com/jiiihpeeh/recliner/vdom"
 )
 
 type BorderStyle = string

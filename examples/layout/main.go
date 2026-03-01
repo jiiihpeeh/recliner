@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/j-p/recliner/app"
-	"github.com/j-p/recliner/c"
-	"github.com/j-p/recliner/vdom"
+	"github.com/jiiihpeeh/recliner/app"
+	"github.com/jiiihpeeh/recliner/c"
+	"github.com/jiiihpeeh/recliner/vdom"
 )
 
 func main() {

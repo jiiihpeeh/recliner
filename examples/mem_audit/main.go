@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/j-p/recliner/app"
-	"github.com/j-p/recliner/c"
-	"github.com/j-p/recliner/hooks"
-	"github.com/j-p/recliner/store"
-	"github.com/j-p/recliner/vdom"
+	"github.com/jiiihpeeh/recliner/app"
+	"github.com/jiiihpeeh/recliner/c"
+	"github.com/jiiihpeeh/recliner/hooks"
+	"github.com/jiiihpeeh/recliner/store"
+	"github.com/jiiihpeeh/recliner/vdom"
 )
 
 var testStore = store.NewStore(0)

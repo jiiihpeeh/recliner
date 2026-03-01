@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/j-p/recliner/render"
-	"github.com/j-p/recliner/vdom"
+	"github.com/jiiihpeeh/recliner/render"
+	"github.com/jiiihpeeh/recliner/vdom"
 )
 
 func main() {

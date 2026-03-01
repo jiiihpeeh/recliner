@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/j-p/recliner/events"
-	stores "github.com/j-p/recliner/store"
+	"github.com/jiiihpeeh/recliner/events"
+	stores "github.com/jiiihpeeh/recliner/store"
 )
 
 var (

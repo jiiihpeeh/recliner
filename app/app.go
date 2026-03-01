@@ -9,11 +9,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/j-p/recliner/debug"
-	"github.com/j-p/recliner/events"
-	"github.com/j-p/recliner/hooks"
-	"github.com/j-p/recliner/render"
-	"github.com/j-p/recliner/vdom"
+	"github.com/jiiihpeeh/recliner/debug"
+	"github.com/jiiihpeeh/recliner/events"
+	"github.com/jiiihpeeh/recliner/hooks"
+	"github.com/jiiihpeeh/recliner/render"
+	"github.com/jiiihpeeh/recliner/vdom"
 	"golang.org/x/term"
 )
 

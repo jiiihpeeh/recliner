@@ -7,9 +7,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/j-p/recliner/events"
-	"github.com/j-p/recliner/util"
-	"github.com/j-p/recliner/vdom"
+	"github.com/jiiihpeeh/recliner/events"
+	"github.com/jiiihpeeh/recliner/util"
+	"github.com/jiiihpeeh/recliner/vdom"
 	"github.com/mattn/go-runewidth"
 	"golang.org/x/term"
 )

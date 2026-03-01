@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/j-p/recliner/util"
-	"github.com/j-p/recliner/vdom"
+	"github.com/jiiihpeeh/recliner/util"
+	"github.com/jiiihpeeh/recliner/vdom"
 )
 
 type ProgressBarProps struct {

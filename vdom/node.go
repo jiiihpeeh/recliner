@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/j-p/recliner/util"
+	"github.com/jiiihpeeh/recliner/util"
 )
 
 type NodeType int

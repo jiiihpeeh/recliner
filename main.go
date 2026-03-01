@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/j-p/recliner/app"
-	"github.com/j-p/recliner/c"
-	"github.com/j-p/recliner/components"
-	"github.com/j-p/recliner/events"
-	"github.com/j-p/recliner/hooks"
-	"github.com/j-p/recliner/vdom"
+	"github.com/jiiihpeeh/recliner/app"
+	"github.com/jiiihpeeh/recliner/c"
+	"github.com/jiiihpeeh/recliner/components"
+	"github.com/jiiihpeeh/recliner/events"
+	"github.com/jiiihpeeh/recliner/hooks"
+	"github.com/jiiihpeeh/recliner/vdom"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
 )
@@ -369,7 +369,7 @@ func createApp(props any, debugMode bool) vdom.Node {
 					Content: c.Box(c.BoxProps{BorderStyle: c.BorderStyleNone},
 						c.Text(c.TextProps{Content: "About", Style: c.TextStyle().Bold().Color("cyan")}),
 						c.Link(c.LinkProps{
-							Href:  "https://github.com/j-p/recliner",
+							Href:  "https://github.com/jiiihpeeh/recliner",
 							Style: c.StyleProps{MarginTop: 1},
 						},
 							c.Text(c.TextProps{Content: "Visit GitHub Repository", Style: c.TextStyle().Color("blue").Underline()}),

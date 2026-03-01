@@ -5,11 +5,11 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/j-p/recliner/events"
-	"github.com/j-p/recliner/hooks"
-	"github.com/j-p/recliner/util"
-	"github.com/j-p/recliner/utils"
-	"github.com/j-p/recliner/vdom"
+	"github.com/jiiihpeeh/recliner/events"
+	"github.com/jiiihpeeh/recliner/hooks"
+	"github.com/jiiihpeeh/recliner/util"
+	"github.com/jiiihpeeh/recliner/utils"
+	"github.com/jiiihpeeh/recliner/vdom"
 	"github.com/mattn/go-runewidth"
 )
 

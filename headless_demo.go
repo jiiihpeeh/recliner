@@ -6,9 +6,9 @@ package main
 import (
 	"fmt"
 
-	"github.com/j-p/recliner/app"
-	"github.com/j-p/recliner/components"
-	"github.com/j-p/recliner/vdom"
+	"github.com/jiiihpeeh/recliner/app"
+	"github.com/jiiihpeeh/recliner/components"
+	"github.com/jiiihpeeh/recliner/vdom"
 )
 
 var longText = `Line 1: The quick brown fox jumps over the lazy dog.

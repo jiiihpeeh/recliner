@@ -3,10 +3,10 @@ package components
 import (
 	"reflect"
 
-	"github.com/j-p/recliner/events"
-	"github.com/j-p/recliner/hooks"
-	"github.com/j-p/recliner/util"
-	"github.com/j-p/recliner/vdom"
+	"github.com/jiiihpeeh/recliner/events"
+	"github.com/jiiihpeeh/recliner/hooks"
+	"github.com/jiiihpeeh/recliner/util"
+	"github.com/jiiihpeeh/recliner/vdom"
 )
 
 type TabItem struct {

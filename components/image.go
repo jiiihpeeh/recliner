@@ -16,9 +16,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/j-p/recliner/hooks"
-	"github.com/j-p/recliner/util"
-	"github.com/j-p/recliner/vdom"
+	"github.com/jiiihpeeh/recliner/hooks"
+	"github.com/jiiihpeeh/recliner/util"
+	"github.com/jiiihpeeh/recliner/vdom"
 	"github.com/nfnt/resize"
 )
 

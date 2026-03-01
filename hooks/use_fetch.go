@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/j-p/recliner/utils"
+	"github.com/jiiihpeeh/recliner/utils"
 )
 
 type FetchResult[T any] struct {

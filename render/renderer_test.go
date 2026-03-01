@@ -3,7 +3,7 @@ package render
 import (
 	"testing"
 
-	"github.com/j-p/recliner/vdom"
+	"github.com/jiiihpeeh/recliner/vdom"
 )
 
 func TestBoxMargins(t *testing.T) {

@@ -3,7 +3,7 @@ package hooks
 import (
 	"slices"
 
-	"github.com/j-p/recliner/events"
+	"github.com/jiiihpeeh/recliner/events"
 )
 
 type FocusOptions struct {

@@ -3,9 +3,9 @@ package components
 import (
 	"strings"
 
-	"github.com/j-p/recliner/events"
-	"github.com/j-p/recliner/util"
-	"github.com/j-p/recliner/vdom"
+	"github.com/jiiihpeeh/recliner/events"
+	"github.com/jiiihpeeh/recliner/util"
+	"github.com/jiiihpeeh/recliner/vdom"
 )
 
 // ScrollBar renders a simple unicode scrollbar. Props:

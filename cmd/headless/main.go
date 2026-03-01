@@ -3,12 +3,12 @@ package main
 import (
 	"fmt"
 
-	"github.com/j-p/recliner/app"
-	"github.com/j-p/recliner/c"
-	"github.com/j-p/recliner/components"
-	"github.com/j-p/recliner/events"
-	"github.com/j-p/recliner/hooks"
-	"github.com/j-p/recliner/vdom"
+	"github.com/jiiihpeeh/recliner/app"
+	"github.com/jiiihpeeh/recliner/c"
+	"github.com/jiiihpeeh/recliner/components"
+	"github.com/jiiihpeeh/recliner/events"
+	"github.com/jiiihpeeh/recliner/hooks"
+	"github.com/jiiihpeeh/recliner/vdom"
 )
 
 func main() {
