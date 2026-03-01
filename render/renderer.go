@@ -445,7 +445,13 @@ func (ctx *RenderContext) measureBox(n *vdom.Element, maxWidth int) Layout {
 	var cl Layout
 	flexDir := util.Ternary(n.Style.FlexDirection == "", vdom.FlexDirectionRow, n.Style.FlexDirection)
 	columnGap := n.Style.ColumnGap
+	if columnGap == 0 {
+		columnGap = n.Style.Gap
+	}
 	rowGap := n.Style.RowGap
+	if rowGap == 0 {
+		rowGap = n.Style.Gap
+	}
 
 	if n.Style.Display == vdom.DisplayFlex {
 		cl = ctx.measureFlex(n, innerMaxWidth, flexDir, columnGap, rowGap)
@@ -590,7 +596,13 @@ func (ctx *RenderContext) layoutNode(node vdom.Node, x, y int) {
 			dir = util.Ternary(n.Style.FlexDirection == "", vdom.FlexDirectionRow, n.Style.FlexDirection)
 		}
 		columnGap := n.Style.ColumnGap
+		if columnGap == 0 {
+			columnGap = n.Style.Gap
+		}
 		rowGap := n.Style.RowGap
+		if rowGap == 0 {
+			rowGap = n.Style.Gap
+		}
 
 		if n.Style.Display == vdom.DisplayFlex {
 			curX, curY = ctx.applyJustification(n, l, bs, p, cx, cy, dir, columnGap, rowGap)
