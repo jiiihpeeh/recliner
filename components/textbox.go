@@ -738,7 +738,14 @@ func TextBox(props any) vdom.Node {
 			Children: contentChildren,
 			Style:    cElemStyle,
 		}
-		rootStyle := vdom.Style{Width: width, Height: height + 2}
+		rootStyle := vdom.Style{
+			Width:        width,
+			Height:       height + 2,
+			BorderTop:    true,
+			BorderBottom: true,
+			BorderLeft:   true,
+			BorderRight:  true,
+		}
 		return &vdom.Element{
 			Type: "box",
 			Props: struct {
@@ -766,7 +773,14 @@ func TextBox(props any) vdom.Node {
 		}
 	}
 
-	rootStyle := vdom.Style{Width: width, Height: height + 2}
+	rootStyle := vdom.Style{
+		Width:        width,
+		Height:       height + 2,
+		BorderTop:    true,
+		BorderBottom: true,
+		BorderLeft:   true,
+		BorderRight:  true,
+	}
 	return &vdom.Element{
 		Type: "box",
 		Props: struct {

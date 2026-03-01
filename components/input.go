@@ -498,7 +498,15 @@ func Input(props any) vdom.Node {
 		OnClick           func(events.MouseEvent)
 	}{
 		BorderStyle: bs, BorderColor: borderColor, Padding: 0, ClearFocusOnClick: false,
-		Style:    vdom.Style{Width: width, Display: "flex", FlexDirection: "row"},
+		Style: vdom.Style{
+			Width:         width,
+			Display:       "flex",
+			FlexDirection: "row",
+			BorderTop:     true,
+			BorderBottom:  true,
+			BorderLeft:    true,
+			BorderRight:   true,
+		},
 		Children: children, OnClick: handleMouse,
 	})
 }
