@@ -390,6 +390,7 @@ type ScrollBarProps struct {
 	Length, Pos, Size      int
 	ThumbColor, TrackColor string
 	OnClick                func(events.MouseEvent)
+	OnScroll               func(int)
 }
 
 type AccordionVariant = string

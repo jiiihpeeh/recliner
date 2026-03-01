@@ -15,6 +15,7 @@ import (
 // - size: int (thumb length)
 // - style: vdom.Style (optional style)
 // - onClick: func(events.MouseEvent) (optional)
+// - onScroll: func(int) (optional, receives delta: -1 for up, +1 for down)
 func ScrollBar(props any) vdom.Node {
 	orientation, ok := util.GetProp[string](props, "orientation")
 	if !ok {
@@ -27,6 +28,8 @@ func ScrollBar(props any) vdom.Node {
 	if !ok {
 		size = 1
 	}
+
+	onScroll, hasOnScroll := util.GetProp[func(int)](props, "onScroll")
 
 	var style vdom.Style
 	if s, ok := util.GetProp[vdom.Style](props, "style"); ok {
@@ -141,8 +144,29 @@ func ScrollBar(props any) vdom.Node {
 			Style:       boxStyle,
 			BorderStyle: "none",
 		}
-		if onClick, ok := util.GetProp[func(events.MouseEvent)](props, "onClick"); ok {
-			finalProps.OnClick = onClick
+
+		if onClickProp, ok := util.GetProp[func(events.MouseEvent)](props, "onClick"); ok {
+			finalProps.OnClick = func(e events.MouseEvent) {
+				if hasOnScroll && (e.Action == events.MouseActionScrollUp || e.Action == events.MouseActionScrollDown) {
+					delta := 1
+					if e.Action == events.MouseActionScrollUp {
+						delta = -1
+					}
+					onScroll(delta)
+				} else if onClickProp != nil {
+					onClickProp(e)
+				}
+			}
+		} else if hasOnScroll {
+			finalProps.OnClick = func(e events.MouseEvent) {
+				if e.Action == events.MouseActionScrollUp || e.Action == events.MouseActionScrollDown {
+					delta := 1
+					if e.Action == events.MouseActionScrollUp {
+						delta = -1
+					}
+					onScroll(delta)
+				}
+			}
 		}
 
 		return &vdom.Element{Type: "box", Props: finalProps, Children: children, Style: boxStyle}
@@ -200,8 +224,29 @@ func ScrollBar(props any) vdom.Node {
 		Style:       style,
 		BorderStyle: "none",
 	}
-	if onClick, ok := util.GetProp[func(events.MouseEvent)](props, "onClick"); ok {
-		finalProps.OnClick = onClick
+
+	if onClickProp, ok := util.GetProp[func(events.MouseEvent)](props, "onClick"); ok {
+		finalProps.OnClick = func(e events.MouseEvent) {
+			if hasOnScroll && (e.Action == events.MouseActionScrollUp || e.Action == events.MouseActionScrollDown) {
+				delta := 1
+				if e.Action == events.MouseActionScrollUp {
+					delta = -1
+				}
+				onScroll(delta)
+			} else if onClickProp != nil {
+				onClickProp(e)
+			}
+		}
+	} else if hasOnScroll {
+		finalProps.OnClick = func(e events.MouseEvent) {
+			if e.Action == events.MouseActionScrollUp || e.Action == events.MouseActionScrollDown {
+				delta := 1
+				if e.Action == events.MouseActionScrollUp {
+					delta = -1
+				}
+				onScroll(delta)
+			}
+		}
 	}
 
 	// Vertical stack (default block flow stacks children vertically)
