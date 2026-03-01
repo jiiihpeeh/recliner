@@ -1,4 +1,4 @@
-module github.com/j-p/recliner
+module github.com/jiiihpeeh/recliner
 
 go 1.25.6
 
