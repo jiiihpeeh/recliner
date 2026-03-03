@@ -74,6 +74,7 @@ func createApp(props any, debugMode bool) vdom.Node {
 	cmdOutput, setCmdOutput := hooks.UseState[string](hooksCtx, "")
 	focusMgr := hooksCtx.UseFocusManager()
 	showMenu, setShowMenu := hooks.UseState[bool](hooksCtx, false)
+	showModal, setShowModal := hooks.UseState[bool](hooksCtx, false)
 	menuX, setMenuX := hooks.UseState[int](hooksCtx, 0)
 	menuY, setMenuY := hooks.UseState[int](hooksCtx, 0)
 	refreshJoke, setRefreshJoke := hooks.UseState[bool](hooksCtx, false)
@@ -82,6 +83,26 @@ func createApp(props any, debugMode bool) vdom.Node {
 	// Radio group states
 	radioValH, setRadioValH := hooks.UseState[string](hooksCtx, "opt1")
 	radioValV, setRadioValV := hooks.UseState[string](hooksCtx, "opt1")
+
+	// Checkbox states
+	check1, setCheck1 := hooks.UseState[bool](hooksCtx, true)
+	check2, setCheck2 := hooks.UseState[bool](hooksCtx, false)
+	check3, setCheck3 := hooks.UseState[bool](hooksCtx, false)
+
+	// Checkbox group state
+	checkboxGroupOpts, setCheckboxGroupOpts := hooks.UseState[[]c.CheckboxOption](hooksCtx, []c.CheckboxOption{
+		{ID: "opt1", Label: "Option 1", Value: true},
+		{ID: "opt2", Label: "Option 2", Value: false},
+		{ID: "opt3", Label: "Option 3", Value: false},
+		{ID: "opt4", Label: "Option 4", Value: true},
+	})
+
+	// Modal input states
+	modalUsername, setModalUsername := hooks.UseState[string](hooksCtx, "")
+	modalEmail, setModalEmail := hooks.UseState[string](hooksCtx, "")
+
+	// Navbar state
+	activeNav, setActiveNav := hooks.UseState[string](hooksCtx, "home")
 
 	// Pre-create inputs to ensure hook order stability even if they are not rendered
 	nameInput := c.Input(c.InputProps{ID: "input1", Value: inputVal, OnChange: func(s string) { setInputVal(s) }, Placeholder: "Enter name...", Width: 30, BorderStyle: c.BorderStyleSingle, BorderColor: "white"})
@@ -137,14 +158,18 @@ func createApp(props any, debugMode bool) vdom.Node {
 			}
 		},
 	},
-		c.Box(c.BoxProps{
-			BorderStyle: c.BorderStyleNone,
-			Style:       c.StyleProps{Position: c.PositionFixed, Top: 0, Left: 0, Width: rootWidth, Display: c.DisplayFlex, FlexDirection: c.FlexDirectionRow, JustifyContent: c.JustifyContentSpaceBetween, Background: "blue"},
-		},
-			c.Text(c.TextProps{Content: " RECLINER DASHBOARD ", Style: c.TextStyle().Bold().Color("white")}),
-			c.Text(c.TextProps{Content: time.Now().Format(" 15:04:05 "), Style: c.TextStyle().Color("whiteBright")}),
-		),
-		c.Spacer(1), // Spacer for the fixed header
+		c.Navbar(c.NavbarProps{
+			Title:    "RECLINER",
+			ActiveID: activeNav,
+			OnSelect: setActiveNav,
+			Items: []c.NavItem{
+				{ID: "home", Label: "Home"},
+				{ID: "about", Label: "About"},
+				{ID: "contact", Label: "Contact"},
+			},
+		}),
+		c.Spacer(1),
+		c.Text(c.TextProps{Content: " Active: " + activeNav + " ", Style: c.TextStyle().BG("gray").Color("black")}),
 		c.Spacer(1),
 		c.Box(c.BoxProps{
 			BorderStyle: c.BorderStyleNone,
@@ -222,6 +247,7 @@ func createApp(props any, debugMode bool) vdom.Node {
 							},
 								c.TextBox(c.TextBoxProps{Value: textBoxValue, Placeholder: "Loading...", Width: innerRootWidth - 25, Height: 5, ReadOnly: true, Scrollable: true, ID: "textbox"}),
 								c.Button(c.ButtonProps{Label: "Refresh", Variant: c.ButtonVariantFilled, Style: c.ButtonStylePrimary, OnClick: func(e events.MouseEvent) { setRefreshJoke(!refreshJoke) }, ID: "refresh-joke-button"}),
+								c.Button(c.ButtonProps{Label: "Settings", Variant: c.ButtonVariantFilled, Style: c.ButtonStyleSecondary, OnClick: func(e events.MouseEvent) { setShowModal(true) }, ID: "modal-button"}),
 							),
 							c.Spacer(1),
 							c.Text(c.TextProps{Content: "Loading Progress:", Style: c.TextStyle().Dim()}),
@@ -292,6 +318,34 @@ func createApp(props any, debugMode bool) vdom.Node {
 								},
 							}),
 							c.Text(c.TextProps{Content: "Selected: " + radioValV, Style: c.TextStyle().Color("gray")}),
+							c.Spacer(1),
+							c.Text(c.TextProps{Content: "Checkboxes:", Style: c.TextStyle().Bold()}),
+							c.CheckBox(c.CheckBoxProps{
+								Label:    c.Text(c.TextProps{Content: "Enable notifications"}),
+								Checked:  check1,
+								OnChange: setCheck1,
+								ID:       "cb1",
+							}),
+							c.CheckBox(c.CheckBoxProps{
+								Label:    c.Text(c.TextProps{Content: "Receive weekly newsletter"}),
+								Checked:  check2,
+								OnChange: setCheck2,
+								ID:       "cb2",
+							}),
+							c.CheckBox(c.CheckBoxProps{
+								Label:    c.Text(c.TextProps{Content: "I agree to terms and conditions"}),
+								Checked:  check3,
+								OnChange: setCheck3,
+								ID:       "cb3",
+							}),
+							c.Text(c.TextProps{Content: fmt.Sprintf("Selected: %v, %v, %v", check1, check2, check3), Style: c.TextStyle().Color("gray")}),
+							c.Spacer(1),
+							c.Text(c.TextProps{Content: "Checkbox Group (Tri-state):", Style: c.TextStyle().Bold()}),
+							c.CheckboxGroup(c.CheckboxGroupProps{
+								Label:    "Select Options",
+								Options:  checkboxGroupOpts,
+								OnChange: setCheckboxGroupOpts,
+							}),
 						),
 					},
 					{
@@ -414,6 +468,33 @@ func createApp(props any, debugMode bool) vdom.Node {
 					X: menuX, Y: menuY,
 					OnClose:  func() { setShowMenu(false) },
 					OnSelect: func(item string) { setShowMenu(false) },
+				})
+			}
+			return nil
+		}(),
+		func() vdom.Node {
+			if showModal {
+				hooksCtx.UseEffect(func() func() {
+					hooksCtx.UseFocusManager().Focus("modal-username")
+					return nil
+				}, []any{showModal})
+				return c.Modal(c.ModalProps{
+					Title:           "User Settings",
+					ConfirmText:     "Save",
+					CancelText:      "Cancel",
+					BackgroundColor: "orange",
+					Children: []vdom.Node{
+						c.Text(c.TextProps{Content: "Username:"}),
+						c.Input(c.InputProps{ID: "modal-username", Value: modalUsername, OnChange: setModalUsername, Placeholder: "Enter username...", Width: 25, BorderStyle: c.BorderStyleSingle, BorderColor: "white", AutoFocus: true}),
+						c.Spacer(1),
+						c.Text(c.TextProps{Content: "Email:"}),
+						c.Input(c.InputProps{ID: "modal-email", Value: modalEmail, OnChange: setModalEmail, Placeholder: "Enter email...", Width: 25, BorderStyle: c.BorderStyleSingle, BorderColor: "white"}),
+						c.Spacer(1),
+						c.Text(c.TextProps{Content: "This is a sample modal dialog with form elements.", Style: c.TextStyle().Dim()}),
+					},
+					OnClose:   func() { setShowModal(false) },
+					OnConfirm: func() { setShowModal(false) },
+					OnCancel:  func() { setShowModal(false) },
 				})
 			}
 			return nil

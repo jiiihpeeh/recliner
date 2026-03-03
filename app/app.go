@@ -387,25 +387,9 @@ func (a *App) inputLoop() {
 					// Standard Hit Test
 					switch e.Action {
 					case events.MouseActionScrollUp:
-						handler := a.renderer.HitTest(adjustedEvent)
-						if handler == nil {
-							a.Scroll(-3)
-						} else {
-							func() {
-								defer func() { recover() }()
-								handler(adjustedEvent)
-							}()
-						}
+						a.Scroll(-3)
 					case events.MouseActionScrollDown:
-						handler := a.renderer.HitTest(adjustedEvent)
-						if handler == nil {
-							a.Scroll(3)
-						} else {
-							func() {
-								defer func() { recover() }()
-								handler(adjustedEvent)
-							}()
-						}
+						a.Scroll(3)
 					case events.MouseActionPress: // Only new presses trigger hit tests if not capturing
 						handler := a.renderer.HitTest(adjustedEvent)
 

@@ -615,7 +615,7 @@ func (ctx *RenderContext) layoutNode(node vdom.Node, x, y int) {
 				continue
 			}
 			if childStyle.Position == "fixed" {
-				ctx.layoutNode(child, ctx.renderer.viewScrollX+childStyle.Left, ctx.renderer.viewScrollY+childStyle.Top)
+				ctx.layoutNode(child, childStyle.Left, childStyle.Top)
 				continue
 			}
 

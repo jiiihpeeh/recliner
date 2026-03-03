@@ -452,6 +452,7 @@ func Register() {
 	vdom.RegisterComponent("spacer", Spacer)
 	vdom.RegisterComponent("newline", Newline)
 	vdom.RegisterComponent("checkbox", CheckBox)
+	vdom.RegisterComponent("checkboxgroup", CheckboxGroup)
 	vdom.RegisterComponent("textbox", TextBox)
 	vdom.RegisterComponent("button", Button)
 	vdom.RegisterComponent("scrollbar", ScrollBar)
@@ -459,4 +460,6 @@ func Register() {
 	vdom.RegisterComponent("tabs", Tabs)
 	vdom.RegisterComponent("image", Image)
 	vdom.RegisterComponent("progressbar", ProgressBar)
+	vdom.RegisterComponent("modal", Modal)
+	vdom.RegisterComponent("navbar", Navbar)
 }

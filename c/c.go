@@ -359,6 +359,18 @@ type CheckBoxProps struct {
 	ID       string
 }
 
+type CheckboxOption struct {
+	ID    string
+	Label string
+	Value bool
+}
+
+type CheckboxGroupProps struct {
+	Label    string
+	Options  []CheckboxOption
+	OnChange func([]CheckboxOption)
+}
+
 type TextBoxProps struct {
 	Value, Placeholder   string
 	Width, Height        int
@@ -385,6 +397,35 @@ type MenuProps struct {
 	OnSelect func(string)
 	OnClose  func()
 	X, Y     int
+}
+
+type ModalProps struct {
+	Title           string
+	Children        []vdom.Node
+	OnClose         func()
+	OnConfirm       func()
+	OnCancel        func()
+	ConfirmText     string
+	CancelText      string
+	ShowButtons     bool
+	ShowCloseButton bool
+	ShowBackdrop    bool
+	Width           int
+	Height          int
+	BackgroundColor string
+}
+
+type NavItem struct {
+	ID      string
+	Label   string
+	OnClick func()
+}
+
+type NavbarProps struct {
+	Title    string
+	Items    []NavItem
+	ActiveID string
+	OnSelect func(string)
 }
 
 type ScrollBarProps struct {
@@ -528,16 +569,19 @@ func Link(p LinkProps, c ...vdom.Node) vdom.Node {
 	}, c...)
 }
 
-func Button(p ButtonProps) vdom.Node           { return components.Button(p) }
-func Input(p InputProps) vdom.Node             { return components.Input(p) }
-func CheckBox(p CheckBoxProps) vdom.Node       { return components.CheckBox(p) }
-func TextBox(p TextBoxProps) vdom.Node         { return components.TextBox(p) }
-func Menu(p MenuProps) vdom.Node               { return components.Menu(p) }
-func Accordion(p AccordionProps) vdom.Node     { return components.Accordion(p) }
-func ScrollBar(p ScrollBarProps) vdom.Node     { return components.ScrollBar(p) }
-func Tabs(p TabsProps) vdom.Node               { return components.Tabs(p) }
-func Image(p ImageProps) vdom.Node             { return components.Image(p) }
-func ProgressBar(p ProgressBarProps) vdom.Node { return components.ProgressBar(p) }
+func Button(p ButtonProps) vdom.Node               { return components.Button(p) }
+func Input(p InputProps) vdom.Node                 { return components.Input(p) }
+func CheckBox(p CheckBoxProps) vdom.Node           { return components.CheckBox(p) }
+func CheckboxGroup(p CheckboxGroupProps) vdom.Node { return components.CheckboxGroup(p) }
+func TextBox(p TextBoxProps) vdom.Node             { return components.TextBox(p) }
+func Menu(p MenuProps) vdom.Node                   { return components.Menu(p) }
+func Modal(p ModalProps) vdom.Node                 { return components.Modal(p) }
+func Navbar(p NavbarProps) vdom.Node               { return components.Navbar(p) }
+func Accordion(p AccordionProps) vdom.Node         { return components.Accordion(p) }
+func ScrollBar(p ScrollBarProps) vdom.Node         { return components.ScrollBar(p) }
+func Tabs(p TabsProps) vdom.Node                   { return components.Tabs(p) }
+func Image(p ImageProps) vdom.Node                 { return components.Image(p) }
+func ProgressBar(p ProgressBarProps) vdom.Node     { return components.ProgressBar(p) }
 
 type RadioOption struct {
 	Label string
